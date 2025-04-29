@@ -51,19 +51,25 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
 
 int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
    int ret;
-   asm volatile("syscall" : "=a"(ret), "=D"(new_offset) : "a"(8), "D"(fd), "S"(offset), "d"(whence): "rcx", "r11");
+   long no = 0;
+   asm volatile("syscall" : "=a"(ret), "=d"(no) : "a"(8), "D"(fd), "S"(offset), "d"(whence): "rcx", "r11");
+   *new_offset = no;
    return ret;
 }
 
 int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
    int ret;
-   asm volatile("syscall" : "=a"(ret), "=D"(bytes_read) : "a"(9), "D"(fd), "S"(buf), "d"(count): "rcx", "r11");
+   long br = 0;
+   asm volatile("syscall" : "=a"(ret), "=d"(br) : "a"(9), "D"(fd), "S"(buf), "d"(count): "rcx", "r11");
+   *bytes_read = br;
    return ret;
 }
 
 int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
    int ret;
-   asm volatile("syscall" : "=a"(ret), "=D"(bytes_written) : "a"(10), "D"(fd), "S"(buf), "d"(count): "rcx", "r11");
+   long bw = 0;
+   asm volatile("syscall" : "=a"(ret), "=d"(bw) : "a"(10), "D"(fd), "S"(buf), "d"(count): "rcx", "r11");
+   *bytes_written = bw;
    return ret;
 }
 
@@ -75,7 +81,9 @@ int sys_close(int fd) {
 
 int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
    int ret;
-   asm volatile("syscall" : "=a"(ret), "=D"(window) : "a"(12), "D"(hint), "S"(size) : "rcx", "r11");
+   void* p = 0;
+   asm volatile("syscall" : "=a"(ret), "=d"(p) : "a"(12), "D"(hint), "S"(size) : "rcx", "r11");
+   *window = p;
    return ret;
 }
 
@@ -86,11 +94,17 @@ int sys_vm_unmap(void *pointer, size_t size) {
 }
 
 int sys_anon_allocate(size_t size, void **pointer) {
-   return sys_vm_map(0,size,0,0,0,0,pointer);
+   int ret;
+   void* p = 0;
+   asm volatile("syscall" : "=a"(ret), "=d"(p) : "a"(12), "D"(0), "S"(size) : "rcx", "r11");
+   *pointer = p;
+   return ret;
 }
 
 int sys_anon_free(void *pointer, size_t size) {
-   return sys_vm_unmap(pointer,size);
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(pointer), "S"(size) : "rcx", "r11");
+   return ret;
 }
 
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
