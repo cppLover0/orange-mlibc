@@ -413,6 +413,7 @@ void ObjectRepository::_fetchFromPhdrs(SharedObject *object, void *phdr_pointer,
 	// segments are already mapped, so we just have to find the dynamic section
 	for(size_t i = 0; i < phdr_count; i++) {
 		auto phdr = (elf_phdr *)((uintptr_t)phdr_pointer + i * phdr_entry_size);
+		//mlibc::infoLogger() << "phdr #" << i << " type: " << phdr->p_type << frg::endlog;
 		switch(phdr->p_type) {
 		case PT_PHDR:
 			// Determine the executable's base address (in the PIE case) by comparing
@@ -535,7 +536,6 @@ frg::expected<LinkerError, void> ObjectRepository::_fetchFromFile(SharedObject *
 	constexpr size_t pageSize = 0x1000;
 	for(int i = 0; i < ehdr.e_phnum; i++) {
 		auto phdr = (elf_phdr *)(phdr_buffer + i * ehdr.e_phentsize);
-
 		if(phdr->p_type == PT_LOAD) {
 			size_t misalign = phdr->p_vaddr & (pageSize - 1);
 			if(!phdr->p_memsz)
@@ -637,7 +637,7 @@ frg::expected<LinkerError, void> ObjectRepository::_fetchFromFile(SharedObject *
 void ObjectRepository::_parseDynamic(SharedObject *object) {
 	if(!object->dynamic)
 		mlibc::infoLogger() << "ldso: Object '" << object->name
-				<< "' does not have a dynamic section" << frg::endlog;
+				<< "' does not have a dynamic section, phdr: " << object->phdrPointer << " phnum: " << object->phdrCount << " phsize: " << object->phdrEntrySize << frg::endlog;
 	__ensure(object->dynamic);
 
 	// Fix up these offsets to addresses after the loop, since the

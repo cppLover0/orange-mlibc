@@ -25,7 +25,7 @@
 #define EXPORT  __attribute__((__visibility__("default")))
 
 static constexpr bool logEntryExit = false;
-static constexpr bool logStartup = false;
+static constexpr bool logStartup = false; 
 static constexpr bool logDlCalls = false;
 
 #ifndef MLIBC_STATIC_BUILD

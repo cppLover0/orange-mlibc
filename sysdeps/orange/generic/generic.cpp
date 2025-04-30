@@ -107,6 +107,24 @@ int sys_anon_free(void *pointer, size_t size) {
    return ret;
 }
 
+[[gnu::weak]] int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,struct stat *statbuf)  {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
+   return 0;
+}
+
+[[gnu::weak]] int sys_vm_protect(void *pointer, size_t size, int prot) {
+   //mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
+   return 0;
+}
+
+/*
+[[gnu::weak]] int sys_isatty(int fd) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(14), "D"(fd) : "rcx", "r11");
+   return ret;
+}
+*/
+
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    return 0;
