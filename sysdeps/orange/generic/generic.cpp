@@ -117,13 +117,25 @@ int sys_anon_free(void *pointer, size_t size) {
    return 0;
 }
 
-/*
 [[gnu::weak]] int sys_isatty(int fd) {
    int ret;
    asm volatile("syscall" : "=a"(ret) : "a"(14), "D"(fd) : "rcx", "r11");
    return ret;
 }
-*/
+
+[[gnu::weak]] pid_t sys_getpid() {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(17) : "rcx", "r11");
+   return ret;
+}
+
+[[gnu::weak]] int sys_fork(pid_t *child) {
+   int ret;
+   pid_t p = 0;
+   asm volatile("syscall" : "=a"(ret), "=d"(p) : "a"(15) : "rcx", "r11");
+   *child = p;
+   return ret;
+}
 
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
