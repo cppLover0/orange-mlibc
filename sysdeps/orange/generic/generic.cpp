@@ -133,6 +133,7 @@ int sys_anon_free(void *pointer, size_t size) {
    int ret;
    pid_t p = 0;
    asm volatile("syscall" : "=a"(ret), "=d"(p) : "a"(15) : "rcx", "r11");
+   //mlibc::infoLogger() << "New pid: " << mlibc::sys_getpid() << frg::endlog;
    *child = p;
    return ret;
 }
