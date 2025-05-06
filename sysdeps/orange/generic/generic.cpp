@@ -138,6 +138,10 @@ int sys_anon_free(void *pointer, size_t size) {
    return ret;
 }
 
+[[gnu::weak]] int sys_execve(const char *path, char *const argv[], char *const envp[]) {
+   asm volatile("syscall" : : "a"(19), "D"(path), "S"(argv), "d"(envp) : "rcx", "r11");
+}
+
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    return 0;
