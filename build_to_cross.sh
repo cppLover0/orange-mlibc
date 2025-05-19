@@ -1,7 +1,5 @@
 # first argument is link to orange dir
-meson setup build --cross-file ci/orange.cross-file --wipe
+meson setup build --cross-file ci/orange.cross-file --wipe --prefix=$1/initrd/usr
 cd build
-ninja
-cp -rf ./*.so sysdeps/orange/crt0.o sysdeps/orange/crti.o sysdeps/orange/crtn.o ~/opt/cross/x86_64-orange/lib
-cp -rf ./*.so sysdeps/orange/crt0.o sysdeps/orange/crti.o sysdeps/orange/crtn.o $1/initrd/usr/lib
+ninja install 
 cd ..
