@@ -891,7 +891,7 @@ long sysconf(int number) {
 		case _SC_CHILD_MAX:
 			mlibc::infoLogger() << "\e[31mmlibc: sysconf(_SC_CHILD_MAX) returns fallback value 25\e[39m" << frg::endlog;
 			// On linux, it is defined to 25 in most cases, so define it to be 25
-			return 1024;
+			return 25;
 		case _SC_JOB_CONTROL:
 			mlibc::infoLogger() << "\e[31mmlibc: sysconf(_SC_JOB_CONTROL) returns fallback value 1\e[39m" << frg::endlog;
 			// If 1, job control is supported
