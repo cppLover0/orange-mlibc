@@ -231,16 +231,6 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return ret;
 }
 
-[[gnu::weak]] int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return ENOSYS;
-}
-
-[[gnu::weak]] int sys_fcntl(int fd, int request, va_list args, int *result) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return ENOSYS;
-}
-
 [[gnu::weak]] int sys_dup(int fd, int flags, int *newfd) {
    int ret;
    int newfd1 = 0;
@@ -258,16 +248,6 @@ int sys_kill(int pid, int sig) {
    int ret;
    asm volatile("syscall" : "=a"(ret) : "a"(25), "D"(pid), "S"(sig) : "rcx", "r11");
    return ret;
-}
-
-[[gnu::weak]] int sys_tcgetattr(int fd, struct termios *attr) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return 0;
-}
-
-[[gnu::weak]] int sys_tcsetattr(int, int, const struct termios *attr) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return 0;
 }
 
 }
