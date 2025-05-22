@@ -249,6 +249,11 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return ret;
 }
 
+int sys_dup2(int fd, int flags, int newfd) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
+   return 0;
+}
+
 int sys_kill(int pid, int sig) {
    int ret;
    asm volatile("syscall" : "=a"(ret) : "a"(25), "D"(pid), "S"(sig) : "rcx", "r11");
