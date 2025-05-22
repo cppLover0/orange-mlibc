@@ -182,7 +182,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return 0;
 }
 
-[[gnu::weak]] int sys_sethostname(const char *buffer, size_t bufsize) {
+[[gnu::weak]] int sys_gethostname(char *buffer, size_t bufsize) {
    int ret;
    asm volatile("syscall" : "=a"(ret) : "a"(22), "D"(buffer), "S"(bufsize) : "rcx", "r11");
    return ret;
