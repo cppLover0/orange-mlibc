@@ -255,4 +255,14 @@ int sys_kill(int pid, int sig) {
    return ret;
 }
 
+[[gnu::weak]] int sys_tcgetattr(int fd, struct termios *attr) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
+   return 0;
+}
+
+[[gnu::weak]] int sys_tcsetattr(int, int, const struct termios *attr) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
+   return 0;
+}
+
 }
