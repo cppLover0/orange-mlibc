@@ -233,12 +233,12 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
 
 [[gnu::weak]] int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return 0;
+   return ENOSYS;
 }
 
 [[gnu::weak]] int sys_fcntl(int fd, int request, va_list args, int *result) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return 0;
+   return ENOSYS
 }
 
 [[gnu::weak]] int sys_dup(int fd, int flags, int *newfd) {
