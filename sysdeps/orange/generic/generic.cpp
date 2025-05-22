@@ -172,4 +172,20 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return ret;
 }
 
+[[gnu::weak]] int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
+   return 0;   
+}
+
+[[gnu::weak]] int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
+   return 0;
+}
+
+[[gnu::weak]] int sys_sethostname(const char *buffer, size_t bufsize) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(22), "D"(buffer), "S"(bufsize) : "rcx", "r11");
+   return ret;
+}
+
 }
