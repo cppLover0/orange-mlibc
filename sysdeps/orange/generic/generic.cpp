@@ -147,4 +147,29 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return 0;
 }
 
+[[gnu::weak]] gid_t sys_getgid() {
+   return 0;
+}
+
+[[gnu::weak]] gid_t sys_getegid() {
+   return 0;
+}
+
+[[gnu::weak]] uid_t sys_getuid() {
+   return 0;
+}
+
+[[gnu::weak]] uid_t sys_geteuid() {
+   return 0;
+}
+
+[[gnu::weak]] pid_t sys_gettid() {
+   return 0;
+}
+[[gnu::weak]] pid_t sys_getppid() {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(21) : "rcx", "r11");
+   return ret;
+}
+
 }
