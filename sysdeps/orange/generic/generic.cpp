@@ -108,8 +108,22 @@ int sys_anon_free(void *pointer, size_t size) {
 }
 
 [[gnu::weak]] int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,struct stat *statbuf)  {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return 0;
+
+   int ready_fd = fd;
+
+   if(fsfdt == fsfd_target::path) {
+      int ret1 = sys_open(path,0,0,&ready_fd);
+      if(ret1)
+         return ret1;
+   }
+
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(23), "D"(ready_fd), "S"(statbuf) : "rcx", "r11");
+
+   if(fsfdt == fsfd_target::path)
+      sys_close(ready_fd);
+
+   return ret;
 }
 
 [[gnu::weak]] int sys_vm_protect(void *pointer, size_t size, int prot) {
