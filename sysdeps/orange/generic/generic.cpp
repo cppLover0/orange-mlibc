@@ -186,6 +186,34 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return ret;
 }
 
+[[gnu::weak]] int sys_getpgid(pid_t pid, pid_t *pgid) {
+   return 0;
+}
+
+[[gnu::weak]] int sys_getsid(pid_t pid, pid_t *sid) {
+   return 0;
+}
+
+[[gnu::weak]] int sys_setpgid(pid_t pid, pid_t pgid) {
+   return 0;
+}
+
+[[gnu::weak]] int sys_setuid(uid_t uid) {
+   return 0;
+}
+
+[[gnu::weak]] int sys_seteuid(uid_t euid) {
+   return 0;
+}
+
+[[gnu::weak]] int sys_setgid(gid_t gid) {
+   return 0;
+}
+
+[[gnu::weak]] int sys_setegid(gid_t egid) {
+   return 0;
+}
+
 [[gnu::weak]] int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    return 0;   
