@@ -241,4 +241,18 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return 0;
 }
 
+[[gnu::weak]] int sys_dup(int fd, int flags, int *newfd) {
+   int ret;
+   int newfd1 = 0;
+   asm volatile("syscall" : "=a"(ret), "=d"(newfd1): "a"(24), "D"(fd) : "rcx", "r11");
+   *newfd = newfd1;
+   return ret;
+}
+
+int sys_kill(int pid, int sig) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret), : "a"(25), "D"(pid), "S"(sig) : "rcx", "r11");
+   return ret;
+}
+
 }
