@@ -47,6 +47,7 @@ extern "C" {
 #endif
 
 struct stat {
+	int64_t st_size;
 	dev_t st_dev;
 	ino_t st_ino;
 	mode_t st_mode;
@@ -54,7 +55,6 @@ struct stat {
 	uid_t st_uid;
 	gid_t st_gid;
 	dev_t st_rdev;
-	off_t st_size;
 	struct timespec st_atim;
 	struct timespec st_mtim;
 	struct timespec st_ctim;
