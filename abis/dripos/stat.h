@@ -47,7 +47,7 @@ extern "C" {
 #endif
 
 struct stat {
-	int64_t st_size;
+	long st_size;
 	dev_t st_dev;
 	ino_t st_ino;
 	mode_t st_mode;
