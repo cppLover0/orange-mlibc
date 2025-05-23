@@ -1,1 +1,1 @@
-../../../../abis/dripos/sigevent.h
+../../../../abis/linux/sigevent.h

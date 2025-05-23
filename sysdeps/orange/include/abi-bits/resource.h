@@ -1,1 +1,1 @@
-../../../../abis/dripos/resource.h
+../../../../abis/linux/resource.h

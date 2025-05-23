@@ -1,1 +1,1 @@
-../../../../abis/dripos/utsname.h
+../../../../abis/linux/utsname.h

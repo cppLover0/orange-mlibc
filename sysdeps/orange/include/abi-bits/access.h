@@ -1,1 +1,1 @@
-../../../../abis/dripos/access.h
+../../../../abis/linux/access.h

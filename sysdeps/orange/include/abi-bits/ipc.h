@@ -1,1 +1,1 @@
-../../../../abis/dripos/ipc.h
+../../../../abis/linux/ipc.h

@@ -1,1 +1,1 @@
-../../../../abis/dripos/uid_t.h
+../../../../abis/linux/uid_t.h

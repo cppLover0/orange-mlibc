@@ -1,1 +1,1 @@
-../../../../abis/dripos/errno.h
+../../../../abis/linux/errno.h

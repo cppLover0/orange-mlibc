@@ -1,1 +1,1 @@
-../../../../abis/dripos/socket.h
+../../../../abis/linux/socket.h

@@ -1,1 +1,1 @@
-../../../../abis/dripos/auxv.h
+../../../../abis/linux/auxv.h

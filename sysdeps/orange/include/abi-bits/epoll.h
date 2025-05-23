@@ -1,1 +1,1 @@
-../../../../abis/dripos/epoll.h
+../../../../abis/linux/epoll.h
