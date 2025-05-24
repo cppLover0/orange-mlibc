@@ -241,12 +241,12 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
 
 [[gnu::weak]] int sys_tcgetattr(int fd, struct termios *attr){
 	int res;
-	return sys_ioctl(fd, TCGETS, (void *)attr, &res);
+	return sys_ioctl(fd, 0x5401, (void *)attr, &res);
 }
 
 [[gnu::weak]] int sys_tcsetattr(int fd, int no, const struct termios *attr){
 	int res;
-	return sys_ioctl(fd, TCSETS, (void *)attr, &res);
+	return sys_ioctl(fd, 0x5402, (void *)attr, &res);
 }
 
 [[gnu::weak]] int sys_fcntl(int fd, int request, va_list args, int *result) {
