@@ -1,7 +1,6 @@
 #include <mlibc/all-sysdeps.hpp>
 #include <mlibc/debug.hpp>
 #include <errno.h>
-#include <asm/ioctls.h>
 
 namespace mlibc {
 
