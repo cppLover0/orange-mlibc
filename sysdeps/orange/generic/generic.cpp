@@ -272,4 +272,17 @@ int sys_kill(int pid, int sig) {
    return ret;
 }
 
+[[gnu::weak]] int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru, pid_t *ret_pid) {
+   if(ru)
+      return ENOSYS;
+
+   int ret;
+   int ret_status;
+   asm volatile("syscall" : "=a"(ret), "=d"(ret_status) : "a"(27), "D"(pid), "S"(ret_pid) : "rcx", "r11");
+
+   *status = ret_status;
+   return ret;
+
+}
+
 }
