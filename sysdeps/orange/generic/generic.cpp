@@ -279,7 +279,7 @@ int sys_kill(int pid, int sig) {
    int ret;
    int ret_status;
    asm volatile("syscall" : "=a"(ret), "=d"(ret_status) : "a"(27), "D"(pid), "S"(ret_pid) : "rcx", "r11");
-
+   mlib::infoLogger() << "i am alive"  << frg::endlog;
    *status = ret_status;
 
    mlibc::infoLogger() << "waitpid end " << ret << " " << ret_status << frg::endlog;
