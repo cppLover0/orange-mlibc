@@ -46,7 +46,7 @@ int sys_tcb_set(void *pointer) {
 
 int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
    int ret;
-   asm volatile ("syscall" : "=a"(ret) : "a"(7), "D"(pathname), "S"(fd) :"rcx", "r11");
+   asm volatile ("syscall" : "=a"(ret) : "a"(7), "D"(pathname), "S"(fd), "d"(flags) :"rcx", "r11");
    return ret;
 }
 
@@ -262,8 +262,9 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
 }
 
 int sys_dup2(int fd, int flags, int newfd) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return ENOSYS;
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(28), "D"(fd), "S"(newfd));
+   return ret;
 }
 
 int sys_kill(int pid, int sig) {
