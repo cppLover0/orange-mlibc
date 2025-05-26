@@ -262,6 +262,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
 }
 
 int sys_dup2(int fd, int flags, int newfd) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    return ENOSYS;
 }
 
