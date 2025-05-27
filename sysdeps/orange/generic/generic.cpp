@@ -285,4 +285,8 @@ int sys_kill(int pid, int sig) {
 
 }
 
+[[gnu::weak]] int sys_getcwd(char *buffer, size_t size) {
+   
+}
+
 }
