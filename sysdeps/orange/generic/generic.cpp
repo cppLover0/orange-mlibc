@@ -83,7 +83,7 @@ int sys_close(int fd) {
 int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
    int ret;
    void* p = 0;
-   asm volatile("syscall" : "=a"(ret), "=d"(p) : "a"(12), "D"(hint), "S"(size) : "rcx", "r11");
+   asm volatile("syscall" : "=a"(ret), "=d"(p) : "a"(12), "D"(hint), "S"(size), "d"(fd) : "rcx", "r11");
    *window = p;
    return ret;
 }
@@ -97,7 +97,7 @@ int sys_vm_unmap(void *pointer, size_t size) {
 int sys_anon_allocate(size_t size, void **pointer) {
    int ret;
    void* p = 0;
-   asm volatile("syscall" : "=a"(ret), "=d"(p) : "a"(12), "D"(0), "S"(size) : "rcx", "r11");
+   asm volatile("syscall" : "=a"(ret), "=d"(p) : "a"(12), "D"(0), "S"(size), "d"(0) : "rcx", "r11");
    *pointer = p;
    return ret;
 }
