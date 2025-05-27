@@ -286,7 +286,9 @@ int sys_kill(int pid, int sig) {
 }
 
 [[gnu::weak]] int sys_getcwd(char *buffer, size_t size) {
-   
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(20), "D"(buffer), "S"(size) : "rcx","r11");
+   return ret;
 }
 
 }
