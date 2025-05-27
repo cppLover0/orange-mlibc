@@ -291,4 +291,23 @@ int sys_kill(int pid, int sig) {
    return ret;
 }
 
+[[gnu::weak]] int sys_fchdir(int fd) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(29), "D"(fd) : "rcx", "r11");
+   return ret;
+}
+
+[[gnu::weak]] int sys_chdir(const char *path) {
+   int fd = 0;
+   int ret1 = sys_open(path,0,0,&fd);
+   if(ret1)
+      return ret1;
+
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(29), "D"(fd) : "rcx", "r11");
+   return ret;
+
+}
+
+
 }
