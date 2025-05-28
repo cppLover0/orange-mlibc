@@ -303,6 +303,12 @@ int sys_kill(int pid, int sig) {
    return ret;
 }
 
+[[gnu::weak]] int sys_uname(struct utsname *buf) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(31), "D"(buf) : "rcx","r11");
+   return ret;
+}
+
 [[gnu::weak]] int sys_chdir(const char *path) {
    int fd = 0;
    int ret1 = sys_open(path,0,0,&fd);
