@@ -297,6 +297,12 @@ int sys_kill(int pid, int sig) {
    return ret;
 }
 
+[[gnu::weak]] int sys_ttyname(int fd, char *buf, size_t size) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret), "a"(30), "D"(fd), "S"(buf), "d"(size));
+   return ret;
+}
+
 [[gnu::weak]] int sys_chdir(const char *path) {
    int fd = 0;
    int ret1 = sys_open(path,0,0,&fd);
