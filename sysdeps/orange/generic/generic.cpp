@@ -299,7 +299,7 @@ int sys_kill(int pid, int sig) {
 
 [[gnu::weak]] int sys_ttyname(int fd, char *buf, size_t size) {
    int ret;
-   asm volatile("syscall" : "=a"(ret), "a"(30), "D"(fd), "S"(buf), "d"(size));
+   asm volatile("syscall" : "=a"(ret) : "a"(30), "D"(fd), "S"(buf), "d"(size) : "rcx","r11");
    return ret;
 }
 
