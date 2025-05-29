@@ -321,5 +321,11 @@ int sys_kill(int pid, int sig) {
 
 }
 
+[[gnu::weak]] int sys_pipe(int *fds, int flags) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(32), "D"(fds) : "rcx", "r11");
+   return ret;
+}
+
 
 }
