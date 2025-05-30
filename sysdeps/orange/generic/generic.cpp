@@ -250,7 +250,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
 
 [[gnu::weak]] int sys_fcntl(int fd, int request, va_list args, int *result) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return ENOSYS;
+   return 0;
 }
 
 [[gnu::weak]] int sys_dup(int fd, int flags, int *newfd) {
