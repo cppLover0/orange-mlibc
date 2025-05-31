@@ -350,5 +350,10 @@ int sys_kill(int pid, int sig) {
    return ret;
 }
 
+[[gnu::weak]] int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(35), "D"(fds), "S"(count), "d"(timeout) : "rcx", "r11");
+   return ret;
+}
 
 }
