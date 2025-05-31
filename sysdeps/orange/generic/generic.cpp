@@ -321,9 +321,32 @@ int sys_kill(int pid, int sig) {
 
 }
 
+[[gnu::weak]] int sys_chmod(const char *pathname, mode_t mode) {
+   int fd = 0;
+   int ret1 = sys_open(pathname,0,0,&fd);
+   if(ret1)
+      return ret1;
+
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(33), "D"(fd), "S"(mode): "rcx", "r11");
+   return ret;
+}
+
+[[gnu::weak]] int sys_fchmod(int fd, mode_t mode) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(33), "D"(fd), "S"(mode) : "rcx", "r11");
+   return ret;
+}
+
 [[gnu::weak]] int sys_pipe(int *fds, int flags) {
    int ret;
    asm volatile("syscall" : "=a"(ret) : "a"(32), "D"(fds), "S"(flags) : "rcx", "r11");
+   return ret;
+}
+
+[[gnu::weak]] int sys_unlinkat(int fd, const char *path, int flags) {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(34), "D"(fd), "S"(path), "d"(flags) : "rcx", "r11");
    return ret;
 }
 
