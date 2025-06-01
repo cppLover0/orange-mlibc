@@ -385,7 +385,7 @@ int sys_kill(int pid, int sig) {
 [[gnu::weak]] int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) {
    int ret;
    int length1;
-   asm volatile("syscall" : "=a"(ret), "=d"(length1) : "a"(37),"D"(path1),"S"(buf),"d"(size) : "rcx","r11");
+   asm volatile("syscall" : "=a"(ret), "=d"(length1) : "a"(37),"D"(path),"S"(buffer),"d"(max_size) : "rcx","r11");
    *length = length1;
    return ret;
 }
