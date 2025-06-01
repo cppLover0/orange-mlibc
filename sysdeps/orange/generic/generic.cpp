@@ -72,6 +72,10 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
 
 }
 
+[[gnu::weak]] int sys_getifaddrs(struct ifaddrs **) {
+   return ENOSYS;
+}
+
 int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
    int ret;
    long no = 0;
@@ -375,6 +379,14 @@ int sys_kill(int pid, int sig) {
 [[gnu::weak]] int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
    int ret;
    asm volatile("syscall" : "=a"(ret) : "a"(35), "D"(fds), "S"(count), "d"(timeout) : "rcx", "r11");
+   return ret;
+}
+
+[[gnu::weak]] int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) {
+   int ret;
+   int length1;
+   asm volatile("syscall" : "=a"(ret), "=d"(length1) : "a"(37),"D"(path1),"S"(buf),"d"(size) : "rcx","r11");
+   *length = length1;
    return ret;
 }
 
