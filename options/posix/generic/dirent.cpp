@@ -66,6 +66,7 @@ DIR *opendir(const char *path) {
 }
 
 struct dirent *readdir(DIR *dir) {
+	mlibc::infoLogger() << dir->__ent_next << " " << dir->__ent_limit << frg::endlog;
 	__ensure(dir->__ent_next <= dir->__ent_limit);
 	if(dir->__ent_next == dir->__ent_limit) {
 		MLIBC_CHECK_OR_ENOSYS(mlibc::sys_read_entries, nullptr);
