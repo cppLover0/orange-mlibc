@@ -50,6 +50,28 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
    return ret;
 }
 
+[[gnu::weak]] int sys_open_dir(const char *path, int *handle) {
+   int ret;
+   asm volatile ("syscall" : "=a"(ret) : "a"(7), "D"(path), "S"(handle), "d"(0200000) : "rcx", "r11");
+   return ret;
+}
+
+#include <dirent.h>
+
+[[gnu::weak]] int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) {
+
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(36),"D"(handle),"S"(buffer) : "rcx","r11");
+   if(ret == -1) {
+      *bytes_read = 0;
+      return 0;
+   }
+
+   *bytes_read = sizeof(struct dirent);
+   return 0;
+
+}
+
 int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
    int ret;
    long no = 0;
