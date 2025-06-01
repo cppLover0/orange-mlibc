@@ -68,7 +68,7 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
    }
 
    *bytes_read = sizeof(struct dirent);
-   return 0;
+   return ret;
 
 }
 
