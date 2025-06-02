@@ -390,4 +390,8 @@ int sys_kill(int pid, int sig) {
    return ret;
 }
 
+[[gnu::weak]] int sys_access(const char *path, int mode) {
+   return 0;
+}
+
 }
