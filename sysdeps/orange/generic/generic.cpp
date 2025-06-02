@@ -382,6 +382,11 @@ int sys_kill(int pid, int sig) {
    return ret;
 }
 
+[[gnu::weak]] int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set,
+		fd_set *except_set, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
+   return 0;         
+}
+
 [[gnu::weak]] int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) {
    int ret;
    int length1;
