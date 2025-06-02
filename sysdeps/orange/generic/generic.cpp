@@ -138,7 +138,7 @@ int sys_anon_free(void *pointer, size_t size) {
 
    int ready_fd = fd;
 
-   if(fsfdt == fsfd_target::path) {
+   if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path) {
       int ret1 = sys_open(path,0,0,&ready_fd);
       if(ret1)
          return ret1;
