@@ -1,3 +1,7 @@
+#ifdef _GNU_SOURCE
+#undef _GNU_SOURCE
+#endif
+
 #include <asm/ioctls.h>
 #include <dirent.h>
 #include <errno.h>
@@ -761,7 +765,6 @@ int sys_tcdrain(int) {
 int sys_socket(int domain, int type_and_flags, int proto, int *fd) {
 	constexpr int type_mask = int(0xF);
 	constexpr int flags_mask = ~int(0xF);
-	__ensure(!((type_and_flags & flags_mask) & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)));
 
 	SignalGuard sguard;
 
@@ -1301,6 +1304,40 @@ int sys_timerfd_settime(
 	return 0;
 }
 
+int sys_timerfd_gettime(int fd, struct itimerspec *its) {
+	SignalGuard sguard;
+
+	managarm::posix::TimerFdGetRequest<MemoryAllocator> req(getSysdepsAllocator());
+	req.set_fd(fd);
+
+	auto [offer, sendReq, recvResp] = exchangeMsgsSync(
+	    getPosixLane(),
+	    helix_ng::offer(
+	        helix_ng::sendBragiHeadOnly(req, getSysdepsAllocator()), helix_ng::recvInline()
+	    )
+	);
+
+	HEL_CHECK(offer.error());
+	HEL_CHECK(sendReq.error());
+	HEL_CHECK(recvResp.error());
+
+	managarm::posix::TimerFdGetResponse<MemoryAllocator> resp(getSysdepsAllocator());
+	resp.ParseFromArray(recvResp.data(), recvResp.length());
+	if (resp.error() != managarm::posix::Errors::SUCCESS)
+		return resp.error() | toErrno;
+
+	if (its) {
+		its->it_value.tv_sec = resp.value_sec();
+		its->it_value.tv_nsec = resp.value_nsec();
+		its->it_interval.tv_sec = resp.interval_sec();
+		its->it_interval.tv_nsec = resp.interval_nsec();
+	} else {
+		return EFAULT;
+	}
+
+	return 0;
+}
+
 int sys_signalfd_create(const sigset_t *masks, int flags, int *fd) {
 	__ensure(!(flags & ~(SFD_CLOEXEC | SFD_NONBLOCK)));
 
@@ -1334,6 +1371,95 @@ int sys_signalfd_create(const sigset_t *masks, int flags, int *fd) {
 	if (resp.error() != managarm::posix::Errors::SUCCESS)
 		return resp.error() | toErrno;
 	*fd = resp.fd();
+	return 0;
+}
+
+int sys_pidfd_open(pid_t pid, unsigned int flags, int *outfd) {
+	SignalGuard sguard;
+
+	managarm::posix::PidfdOpenRequest<MemoryAllocator> req(getSysdepsAllocator());
+	req.set_pid(pid);
+	req.set_flags(flags);
+
+	auto [offer, send_req, recv_resp] = exchangeMsgsSync(
+	    getPosixLane(),
+	    helix_ng::offer(
+	        helix_ng::sendBragiHeadOnly(req, getSysdepsAllocator()), helix_ng::recvInline()
+	    )
+	);
+
+	HEL_CHECK(offer.error());
+	HEL_CHECK(send_req.error());
+	HEL_CHECK(recv_resp.error());
+
+	managarm::posix::PidfdOpenResponse<MemoryAllocator> resp(getSysdepsAllocator());
+	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
+
+	if (resp.error() != managarm::posix::Errors::SUCCESS)
+		return resp.error() | toErrno;
+
+	*outfd = resp.fd();
+	return 0;
+}
+
+int sys_pidfd_getpid(int pidfd, pid_t *outpid) {
+	SignalGuard sguard;
+
+	managarm::posix::PidfdGetPidRequest<MemoryAllocator> req(getSysdepsAllocator());
+	req.set_pidfd(pidfd);
+
+	auto [offer, send_req, recv_resp] = exchangeMsgsSync(
+	    getPosixLane(),
+	    helix_ng::offer(
+	        helix_ng::sendBragiHeadOnly(req, getSysdepsAllocator()), helix_ng::recvInline()
+	    )
+	);
+
+	HEL_CHECK(offer.error());
+	HEL_CHECK(send_req.error());
+	HEL_CHECK(recv_resp.error());
+
+	managarm::posix::PidfdGetPidResponse<MemoryAllocator> resp(getSysdepsAllocator());
+	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
+
+	if (resp.error() != managarm::posix::Errors::SUCCESS)
+		return resp.error() | toErrno;
+
+	*outpid = resp.pid();
+	return 0;
+}
+
+int sys_pidfd_send_signal(int pidfd, int sig, siginfo_t *info, unsigned int flags) {
+	SignalGuard sguard;
+
+	if (info) {
+		mlibc::infoLogger() << "mlibc: pidfd_send_signal does not support passing siginfo_t info"
+		                    << frg::endlog;
+		return EINVAL;
+	}
+
+	managarm::posix::PidfdSendSignalRequest<MemoryAllocator> req(getSysdepsAllocator());
+	req.set_pidfd(pidfd);
+	req.set_signal(sig);
+	req.set_flags(flags);
+
+	auto [offer, send_req, recv_resp] = exchangeMsgsSync(
+	    getPosixLane(),
+	    helix_ng::offer(
+	        helix_ng::sendBragiHeadOnly(req, getSysdepsAllocator()), helix_ng::recvInline()
+	    )
+	);
+
+	HEL_CHECK(offer.error());
+	HEL_CHECK(send_req.error());
+	HEL_CHECK(recv_resp.error());
+
+	managarm::posix::PidfdSendSignalResponse<MemoryAllocator> resp(getSysdepsAllocator());
+	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
+
+	if (resp.error() != managarm::posix::Errors::SUCCESS)
+		return resp.error() | toErrno;
+
 	return 0;
 }
 

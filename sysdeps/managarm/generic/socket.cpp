@@ -226,12 +226,13 @@ int sys_peername(
 
 namespace {
 
-std::array<std::pair<int, int>, 5> getsockopt_passthrough = {{
+std::array<std::pair<int, int>, 6> getsockopt_passthrough = {{
     {SOL_SOCKET, SO_PROTOCOL},
     {SOL_SOCKET, SO_PEERCRED},
     {SOL_NETLINK, NETLINK_LIST_MEMBERSHIPS},
     {SOL_SOCKET, SO_TYPE},
     {SOL_SOCKET, SO_ACCEPTCONN},
+    {SOL_SOCKET, SO_PEERPIDFD},
 }};
 
 }
@@ -289,12 +290,6 @@ sys_getsockopt(int fd, int layer, int number, void *__restrict buffer, socklen_t
 		     "unimplemented\e[39m"
 		  << frg::endlog;
 		return 0;
-	} else if (layer == SOL_SOCKET && number == SO_PEERPIDFD) {
-		mlibc::infoLogger() << "\e[31mmlibc: getsockopt() call with SOL_SOCKET and SO_PEERPIDFD "
-		                       "is unimplemented, hardcoding 0\e[39m"
-		                    << frg::endlog;
-		*(int *)buffer = 0;
-		return 0;
 	} else if (std::find(
 	               getsockopt_passthrough.begin(),
 	               getsockopt_passthrough.end(),
@@ -310,16 +305,18 @@ sys_getsockopt(int fd, int layer, int number, void *__restrict buffer, socklen_t
 		req.set_number(number);
 		req.set_optlen(size ? *size : 0);
 
-		auto [offer, send_req, recv_resp] = exchangeMsgsSync(
+		auto [offer, send_req, send_creds, recv_resp] = exchangeMsgsSync(
 		    handle,
 		    helix_ng::offer(
 		        helix_ng::want_lane,
 		        helix_ng::sendBragiHeadOnly(req, getSysdepsAllocator()),
+		        helix_ng::imbueCredentials(),
 		        helix_ng::recvInline()
 		    )
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
+		HEL_CHECK(send_creds.error());
 		HEL_CHECK(recv_resp.error());
 
 		managarm::fs::SvrResponse<MemoryAllocator> resp(getSysdepsAllocator());
@@ -349,12 +346,14 @@ std::array<std::pair<int, int>, 6> setsockopt_readonly = {{
     {SOL_IP, SO_PEERSEC},
 }};
 
-std::array<std::pair<int, int>, 10> setsockopt_passthrough = {{
+std::array<std::pair<int, int>, 12> setsockopt_passthrough = {{
     {SOL_PACKET, PACKET_AUXDATA},
     {SOL_SOCKET, SO_LOCK_FILTER},
     {SOL_SOCKET, SO_BINDTODEVICE},
     {SOL_SOCKET, SO_TIMESTAMP},
     {SOL_SOCKET, SO_PASSCRED},
+    {SOL_SOCKET, SO_RCVTIMEO},
+    {SOL_SOCKET, SO_SNDTIMEO},
     {SOL_IP, IP_PKTINFO},
     {SOL_IP, IP_RECVTTL},
     {SOL_IP, IP_RETOPTS},
@@ -540,11 +539,6 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer, socklen_t 
 		                       "unimplemented\e[39m"
 		                    << frg::endlog;
 		return 0;
-	} else if (layer == SOL_SOCKET && number == SO_SNDTIMEO) {
-		mlibc::infoLogger(
-		) << "\e[31mmlibc: setsockopt() call with SOL_SOCKET and SO_SNDTIMEO is unimplemented\e[39m"
-		  << frg::endlog;
-		return 0;
 	} else if (layer == SOL_SOCKET && number == SO_OOBINLINE) {
 		mlibc::infoLogger() << "\e[31mmlibc: setsockopt() call with SOL_SOCKET and SO_OOBINLINE is "
 		                       "unimplemented\e[39m"
@@ -553,11 +547,6 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer, socklen_t 
 	} else if (layer == SOL_SOCKET && number == SO_PRIORITY) {
 		mlibc::infoLogger(
 		) << "\e[31mmlibc: setsockopt() call with SOL_SOCKET and SO_PRIORITY is unimplemented\e[39m"
-		  << frg::endlog;
-		return 0;
-	} else if (layer == SOL_SOCKET && number == SO_RCVTIMEO) {
-		mlibc::infoLogger(
-		) << "\e[31mmlibc: setsockopt() call with SOL_SOCKET and SO_RCVTIMEO is unimplemented\e[39m"
 		  << frg::endlog;
 		return 0;
 	} else if (layer == SOL_IP && number == IP_RECVERR) {

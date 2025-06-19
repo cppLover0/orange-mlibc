@@ -153,4 +153,17 @@ int sys_sigpending(sigset_t *set) {
 	return 0;
 }
 
+int sys_pause() {
+	HelWord set = 0;
+	uint64_t former, seq;
+
+	// no-op to obtain a seqnum
+	HEL_CHECK(
+	    helSyscall2_2(kHelObserveSuperCall + posix::superSigMask, SIG_BLOCK, set, &former, &seq)
+	);
+	HEL_CHECK(helSyscall1(kHelObserveSuperCall + posix::superSigSuspend, seq));
+
+	return EINTR;
+}
+
 } // namespace mlibc
