@@ -332,7 +332,7 @@ uint64_t __orange_timestamp() {
    if(nano < 0)
       nano = 0;
 
-   uint64_t result = (sec * 1000 * 1000) + nano;
+   uint64_t result = (sec * 1000 * 1000 * 1000) + nano;
    uint64_t end = __orange_timestamp() + result;
    while(__orange_timestamp() <= end)
       asm volatile("nop");
