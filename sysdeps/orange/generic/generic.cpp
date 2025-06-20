@@ -188,6 +188,11 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return ENOSYS;
 }
 
+[[gnu::weak]] int sys_fsync(int fd) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
+   return 0;
+}
+
 [[gnu::weak]] gid_t sys_getgid() {
    return 0;
 }
@@ -309,6 +314,30 @@ int sys_kill(int pid, int sig) {
    
    return ret;
 
+}
+
+uint64_t __orange_timestamp() {
+   uint64_t timestamp;
+   asm volatile("syscall" : "=d"(timestamp) : "a"(42) : "rcx","r11");
+   return timestamp;
+}
+
+[[gnu::weak]] int sys_sleep(time_t *secs, long *nanos) {
+   time_t sec = *secs;
+   long nano = *nanos;
+
+   if(sec < 0)
+      sec = 0;
+   
+   if(nano < 0)
+      nano = 0;
+
+   uint64_t result = (sec * 1000 * 1000) + nano;
+   uint64_t end = __orange_timestamp() + result;
+   while(__orange_timestamp() <= end)
+      asm volatile("nop");
+
+   return 0;
 }
 
 [[gnu::weak]] int sys_getcwd(char *buffer, size_t size) {
