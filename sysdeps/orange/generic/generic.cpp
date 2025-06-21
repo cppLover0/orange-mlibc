@@ -333,9 +333,11 @@ uint64_t __orange_timestamp() {
       nano = 0;
 
    uint64_t result = (sec * 1000 * 1000 * 1000) + nano;
-   asm volatile("syscall" : : "a"(43), "D"(result) : "rcx","r11");
 
-   return 0;
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(43), "D"(result) : "rcx","r11");
+
+   return ret;
 }
 
 [[gnu::weak]] int sys_getcwd(char *buffer, size_t size) {
