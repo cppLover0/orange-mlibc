@@ -333,9 +333,7 @@ uint64_t __orange_timestamp() {
       nano = 0;
 
    uint64_t result = (sec * 1000 * 1000 * 1000) + nano;
-   uint64_t end = __orange_timestamp() + result;
-   while(__orange_timestamp() <= end)
-      asm volatile("nop");
+   asm volatile("syscall" : : "a"(43), "D"(result) : "rcx","r11");
 
    return 0;
 }
