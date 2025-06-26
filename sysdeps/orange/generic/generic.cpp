@@ -294,7 +294,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
 
 int sys_dup2(int fd, int flags, int newfd) {
    int ret;
-   asm volatile("syscall" : "=a"(ret) : "a"(28), "D"(fd), "S"(newfd));
+   asm volatile("syscall" : "=a"(ret) : "a"(28), "D"(fd), "S"(newfd), "d"(flags) : "rcx","r11");
    return ret;
 }
 
