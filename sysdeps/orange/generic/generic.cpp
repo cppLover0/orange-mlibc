@@ -280,8 +280,12 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
 }
 
 [[gnu::weak]] int sys_fcntl(int fd, int request, va_list args, int *result) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return 0;
+   uint64_t arg = va_arg(args,uint64_t);
+   uint64_t result0;
+   int ret;
+   asm volatile("syscall" : "=a"(ret), "=d"(result0) : "a"(43), "D"(fd), "S"(request), "d"(arg) : "rcx","r11");
+   *result = ret;
+   return ret;
 }
 
 [[gnu::weak]] int sys_dup(int fd, int flags, int *newfd) {
