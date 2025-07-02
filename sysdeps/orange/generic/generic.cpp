@@ -432,9 +432,4 @@ uint64_t __orange_timestamp() {
    return 0;
 }
 
-int sys_brk(void **out) {
-	(void)out;
-	return -1;
-}
-
 }
