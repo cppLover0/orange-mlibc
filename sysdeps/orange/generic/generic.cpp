@@ -198,7 +198,7 @@ int sys_anon_free(void *pointer, size_t size) {
 
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return ENOSYS;
+   return 0;
 }
 
 [[gnu::weak]] int sys_fsync(int fd) {
