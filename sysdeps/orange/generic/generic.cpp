@@ -63,7 +63,9 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
 
 [[gnu::weak]] int sys_open_dir(const char *path, int *handle) {
    int ret;
-   asm volatile ("syscall" : "=a"(ret) : "a"(7), "D"(path), "S"(handle), "d"(0200000) : "rcx", "r11");
+   int fd;
+   asm volatile ("syscall" : "=a"(ret), "=d"(fd) : "a"(7), "D"(path), "S"(AT_FDCWD), "d"(0200000) : "rcx", "r11");
+   *handle = fd;
    return ret;
 }
 
