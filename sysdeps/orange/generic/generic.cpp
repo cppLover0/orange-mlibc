@@ -1,6 +1,7 @@
 #include <mlibc/all-sysdeps.hpp>
 #include <mlibc/debug.hpp>
 #include <errno.h>
+#include <fcntl.h>
 
 namespace mlibc {
 
@@ -46,7 +47,17 @@ int sys_tcb_set(void *pointer) {
 
 int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
    int ret;
-   asm volatile ("syscall" : "=a"(ret) : "a"(7), "D"(pathname), "S"(fd), "d"(flags) :"rcx", "r11");
+   int fd0;
+   asm volatile ("syscall" : "=a"(ret), "=d"(fd0) : "a"(7), "D"(pathname), "S"(AT_FDCWD), "d"(flags) :"rcx", "r11");
+   *fd = fd0;
+   return ret;
+}
+
+[[gnu::weak]] int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
+   int ret;
+   int fd0;
+   asm volatile ("syscall" : "=a"(ret), "=d"(fd0) : "a"(7), "D"(path), "S"(dirfd), "d"(flags) :"rcx", "r11");
+   *fd = fd0;
    return ret;
 }
 
