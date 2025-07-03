@@ -28,12 +28,14 @@ void sys_libc_log(const char *message) {
 }
 
 int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    int ret ;
    asm volatile ("syscall" : "=a"(ret) : "a"(3), "D"(pointer), "S"(expected) :"rcx", "r11");
    return ret;
 }
 
 int sys_futex_wake(int *pointer) {
+   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    int ret;
    asm volatile ("syscall" : "=a"(ret) : "a"(4), "D"(pointer) :"rcx", "r11");
    return ret;
