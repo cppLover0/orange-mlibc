@@ -28,14 +28,12 @@ void sys_libc_log(const char *message) {
 }
 
 int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    int ret ;
    asm volatile ("syscall" : "=a"(ret) : "a"(3), "D"(pointer), "S"(expected) :"rcx", "r11");
    return ret;
 }
 
 int sys_futex_wake(int *pointer) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    int ret;
    asm volatile ("syscall" : "=a"(ret) : "a"(4), "D"(pointer) :"rcx", "r11");
    return ret;
@@ -198,11 +196,6 @@ int sys_anon_free(void *pointer, size_t size) {
    asm volatile("syscall" : : "a"(19), "D"(path), "S"(argv), "d"(envp) : "rcx", "r11");
 }
 
-int sys_clock_get(int clock, time_t *secs, long *nanos) {
-   mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
-   return 0;
-}
-
 [[gnu::weak]] int sys_fsync(int fd) {
    mlibc::infoLogger() << "TODO: Implement " << __func__ << frg::endlog;
    return 0;
@@ -339,6 +332,13 @@ uint64_t __orange_timestamp() {
    uint64_t timestamp;
    asm volatile("syscall" : "=d"(timestamp) : "a"(42) : "rcx","r11");
    return timestamp;
+}
+
+int sys_clock_get(int clock, time_t *secs, long *nanos) {
+   unsigned long long timestamp = __orange_timestamp();
+   *secs = timestamp / 1000000000;
+   *nanos = timestamp;
+   return 0;
 }
 
 [[gnu::weak]] int sys_sleep(time_t *secs, long *nanos) {
