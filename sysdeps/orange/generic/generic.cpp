@@ -355,7 +355,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
    return ret;
 }
 
-[[gnu::weak]] int sys_getcwd(char *buffer, size_t size) {
+int sys_getcwd(char *buffer, size_t size) {
    int ret;
    asm volatile("syscall" : "=a"(ret) : "a"(20), "D"(buffer), "S"(size) : "rcx","r11");
    return ret;
