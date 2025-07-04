@@ -74,13 +74,9 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
 [[gnu::weak]] int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) {
 
    int ret;
-   asm volatile("syscall" : "=a"(ret) : "a"(36),"D"(handle),"S"(buffer) : "rcx","r11");
-   if(ret == -1) {
-      *bytes_read = 0;
-      return 0;
-   }
-
-   *bytes_read = sizeof(struct dirent);
+   size_t br;
+   asm volatile("syscall" : "=a"(ret), "=d"(br) : "a"(36),"D"(handle),"S"(buffer) : "rcx","r11");
+   *bytes_read = br;
    return ret;
 
 }
