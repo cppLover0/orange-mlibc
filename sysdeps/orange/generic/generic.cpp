@@ -70,9 +70,7 @@ int sys_tcb_set(void *pointer) {
 }
 
 void sys_libc_log(const char *message) {
-    int ret;
-    asm volatile("syscall" : "=a"(ret) : "a"(9), "D"(message) : "rcx","r11");
-    return ret;
+    asm volatile("syscall" : : "a"(9), "D"(message) : "rcx","r11");
 }
 
 void sys_exit(int status) {
