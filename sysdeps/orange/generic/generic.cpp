@@ -97,6 +97,14 @@ int sys_vm_unmap(void *pointer, size_t size) {
     return ret;
 }
 
+int sys_anon_allocate(size_t size, void **pointer) {
+    return sys_vm_map(0,size,0,MAP_ANONYMOUS,-1,0,pointer);
+}
+
+int sys_anon_free(void *pointer, size_t size) {
+    return sys_vm_unmap(pointer,size);
+}
+
 [[gnu::weak]] int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
     int ready_fd = fd;
 
