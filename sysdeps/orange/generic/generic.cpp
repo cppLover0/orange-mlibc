@@ -105,6 +105,10 @@ int sys_anon_free(void *pointer, size_t size) {
     return sys_vm_unmap(pointer,size);
 }
 
+int sys_clock_get(int clock, time_t *secs, long *nanos) {
+    return ENOSYS;
+}
+
 [[gnu::weak]] int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
     int ready_fd = fd;
 
