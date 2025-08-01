@@ -138,4 +138,12 @@ int sys_pipe(int *fds, int flags) {
     return 0;
 }
 
+int sys_fork(pid_t *child) {
+    int new_pid;
+    int ret;
+    asm volatile("syscall" : "=a"(ret), "=d"(new_pid) : "a"(15) : "rcx","r11");
+    *child = new_pid;
+    return ret;
+}
+
 }
