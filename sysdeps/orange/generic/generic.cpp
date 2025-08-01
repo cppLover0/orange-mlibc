@@ -134,7 +134,7 @@ int sys_pipe(int *fds, int flags) {
     int write_fd;
     asm volatile ("syscall" : "=a"(read_fd), "=d"(write_fd) : "a"(14), "D"(flags) : "rcx","r11");
     fds[0] = read_fd;
-    fds[0] = write_fd;
+    fds[1] = write_fd;
     return 0;
 }
 
