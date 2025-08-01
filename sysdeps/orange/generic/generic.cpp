@@ -129,4 +129,13 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
     return 0;
 }
 
+int sys_pipe(int *fds, int flags) {
+    int read_fd;
+    int write_fd;
+    asm volatile ("syscall" : "=a"(read_fd), "=d"(write_fd) : "a"(14), "D"(flags) : "rcx","r11");
+    fds[0] = read_fd;
+    fds[0] = write_fd;
+    return 0;
+}
+
 }
