@@ -146,4 +146,18 @@ int sys_fork(pid_t *child) {
     return ret;
 }
 
+int sys_dup(int fd, int flags, int *newfd) {
+    int fd0;
+    int ret;
+    asm volatile("syscall" : "=a"(ret), "=d"(fd0) : "a"(16), "D"(fd), "S"(flags) : "rcx","r11");
+    *newfd = fd0;
+    return ret;
+}
+
+int sys_dup2(int fd, int flags, int newfd) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(17), "D"(fd), "S"(flags), "d"(newfd) : "rcx","r11");
+    return ret;
+}
+
 }
