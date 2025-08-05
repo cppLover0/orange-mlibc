@@ -160,4 +160,11 @@ int sys_dup2(int fd, int flags, int newfd) {
     return ret;
 }
 
+int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(20), "D"(fd), "S"(request), "d"(arg) : "rcx","r11");
+    *result = ret;
+    return ret;
+}
+
 }
