@@ -167,4 +167,10 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
     return ret;
 }
 
+int sys_isatty(int fd) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(23), "D"(fd) : "rcx","r11");
+    return ret;
+}
+
 }
