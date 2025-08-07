@@ -173,4 +173,14 @@ int sys_isatty(int fd) {
     return ret;
 }
 
+int sys_ptsname(int fd, char *buffer, size_t length) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(26), "D"(fd), "S"(buffer), "d"(length) : "rcx","r11");
+    return ret;
+}
+
+int sys_unlockpt(int fd) {
+    return 0;
+}
+
 }
