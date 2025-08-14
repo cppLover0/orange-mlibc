@@ -109,7 +109,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
     return ENOSYS;
 }
 
-[[gnu::weak]] int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
+int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
     int ready_fd = fd;
 
    if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path) {
@@ -125,7 +125,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
       sys_close(ready_fd);
 }
 
-[[gnu::weak]] int sys_vm_protect(void *pointer, size_t size, int prot) {
+int sys_vm_protect(void *pointer, size_t size, int prot) {
     return 0;
 }
 
@@ -181,6 +181,35 @@ int sys_ptsname(int fd, char *buffer, size_t length) {
 
 int sys_unlockpt(int fd) {
     return 0;
+}
+
+int sys_open_dir(const char *path, int *handle) {
+    int fd;
+    int ret = sys_openat(AT_FDCWD,path,O_DIRECTORY,O_RDWR,&fd);
+    *handle = fd;
+    return ret;
+}
+
+int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) {
+    int br;
+    int ret;
+    asm volatile("syscall" : "=a"(ret), "=d"(br) : "a"(28), "D"(handle), "S"(buffer) : "rcx","r11");
+    *bytes_read = br;
+    return ret;
+}
+
+int sys_tcgetattr(int fd, struct termios *attr){
+	int res;
+	return sys_ioctl(fd, 0x5401, (void *)attr, &res);
+}
+
+int sys_tcsetattr(int fd, int no, const struct termios *attr){
+	int res;
+	return sys_ioctl(fd, 0x5402, (void *)attr, &res);
+}
+
+int sys_execve(const char *path, char *const argv[], char *const envp[]) {
+    asm volatile("syscall" : : "a"(29), "D"(path), "S"(argv), "d"(envp): "rcx","r11");
 }
 
 }
