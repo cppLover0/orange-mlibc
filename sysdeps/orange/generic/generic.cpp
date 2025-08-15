@@ -272,4 +272,17 @@ int sys_setegid(gid_t egid) {
    return 0;
 }
 
+int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
+    return 0;
+}
+
+int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
+    return 0;
+}
+
+int sys_gethostname(char *buffer, size_t bufsize) {
+    asm volatile("syscall" : : "a"(32), "D"(buffer), "S"(bufsize) : "rcx","r11");
+    return 0;
+}
+
 }
