@@ -212,4 +212,64 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]) {
     asm volatile("syscall" : : "a"(29), "D"(path), "S"(argv), "d"(envp): "rcx","r11");
 }
 
+gid_t sys_getgid() {
+   return 0;
+}
+
+gid_t sys_getegid() {
+   return 0;
+}
+
+uid_t sys_getuid() {
+   return 0;
+}
+
+uid_t sys_geteuid() {
+   return 0;
+}
+
+pid_t sys_gettid() {
+   return 0;
+}
+
+pid_t sys_getppid() {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(31) : "rcx", "r11");
+   return ret;
+}
+
+pid_t sys_getpid() {
+   int ret;
+   asm volatile("syscall" : "=a"(ret) : "a"(30) : "rcx", "r11");
+   return ret;
+}
+
+int sys_getpgid(pid_t pid, pid_t *pgid) {
+   return 0;
+}
+
+int sys_getsid(pid_t pid, pid_t *sid) {
+   return 0;
+}
+
+int sys_setpgid(pid_t pid, pid_t pgid) {
+   return 0;
+}
+
+int sys_setuid(uid_t uid) {
+   return 0;
+}
+
+int sys_seteuid(uid_t euid) {
+   return 0;
+}
+
+int sys_setgid(gid_t gid) {
+   return 0;
+}
+
+int sys_setegid(gid_t egid) {
+   return 0;
+}
+
 }
