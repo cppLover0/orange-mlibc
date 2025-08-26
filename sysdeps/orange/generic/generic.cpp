@@ -283,8 +283,28 @@ int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__r
 }
 
 int sys_gethostname(char *buffer, size_t bufsize) {
-    asm volatile("syscall" : : "a"(32), "D"(buffer), "S"(bufsize) : "rcx","r11");
-    return 0;
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(32), "D"(buffer), "S"(bufsize) : "rcx","r11");
+    return ret;
+}
+
+int sys_getcwd(char *buffer, size_t size) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(33), "D"(buffer), "S"(size) : "rcx","r11");
+    return ret;
+}
+
+int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru, pid_t *ret_pid) {
+    int ret;
+    uint64_t final;
+    int status0;
+    int retpid;
+    asm volatile("syscall" : "=a"(ret), "=d"(final) : "a"(34), "D"(pid) : "rcx","r11");
+    status0 = final >> 32;
+    retpid = final & 0xFFFFFFFF;
+    *status = status0;
+    *ret_pid = retpid;
+    return ret;
 }
 
 }
