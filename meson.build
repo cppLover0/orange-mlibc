@@ -1,4 +1,4 @@
-project('mlibc', default_options: ['warning_level=2', 'c_std=gnu11', 'cpp_std=c++20'], meson_version: '>=1.3.0')
+project('mlibc', default_options: ['warning_level=2', 'c_std=gnu11', 'cpp_std=c++23'], meson_version: '>=1.3.0')
 
 fs = import('fs')
 
@@ -239,6 +239,7 @@ elif host_machine.system() == 'managarm'
 elif host_machine.system() == 'ironclad'
 	rtld_include_dirs += include_directories('sysdeps/ironclad/include')
 	libc_include_dirs += include_directories('sysdeps/ironclad/include')
+	internal_conf.set10('MLIBC_MMAP_ALLOCATE_DSO', true)
 	subdir('sysdeps/ironclad')
 elif host_machine.system() == 'keyronex'
 	rtld_include_dirs += include_directories('sysdeps/keyronex/include')
@@ -258,10 +259,6 @@ elif host_machine.system() == 'dripos'
 	rtld_include_dirs += include_directories('sysdeps/dripos/include')
 	libc_include_dirs += include_directories('sysdeps/dripos/include')
 	subdir('sysdeps/dripos')
-elif host_machine.system() == 'orange'
-	rtld_include_dirs += include_directories('sysdeps/orange/include')
-	libc_include_dirs += include_directories('sysdeps/orange/include')
-	subdir('sysdeps/orange')
 elif host_machine.system() == 'astral'
 	rtld_include_dirs += include_directories('sysdeps/astral/include')
 	libc_include_dirs += include_directories('sysdeps/astral/include')
@@ -272,6 +269,10 @@ elif host_machine.system() == 'menix'
 	rtld_include_dirs += include_directories('sysdeps/menix/include')
 	libc_include_dirs += include_directories('sysdeps/menix/include')
 	subdir('sysdeps/menix')
+elif host_machine.system() == 'orange'
+	rtld_include_dirs += include_directories('sysdeps/orange/include')
+	libc_include_dirs += include_directories('sysdeps/orange/include')
+	subdir('sysdeps/orange')
 elif host_machine.system() == 'nyaux'
 	rtld_include_dirs += include_directories('sysdeps/nyaux/include')
 	libc_include_dirs += include_directories('sysdeps/nyaux/include')
@@ -379,6 +380,7 @@ internal_sources = [
 	'options/internal/generic/ensure.cpp',
 	'options/internal/generic/essential.cpp',
 	'options/internal/generic/frigg.cpp',
+	'options/internal/generic/getopt.cpp',
 	'options/internal/generic/global-config.cpp',
 	'options/internal/generic/inline-emitter.cpp',
 	'options/internal/generic/locale.cpp',
@@ -394,10 +396,24 @@ internal_sources = [
 	'options/internal' / host_machine.cpu_family() / 'fenv.S',
 ]
 
+if host_machine.cpu_family() == 'riscv64'
+	internal_sources += [
+		'options/internal/riscv64/hwprobe.cpp',
+	]
+endif
+
 if not no_headers
 	install_headers(
 		'options/internal/include/stdint.h'
 	)
+
+	if host_machine.cpu_family() == 'riscv64'
+		install_headers(
+			'options/internal/riscv64-include/sys/hwprobe.h',
+			subdir: 'sys'
+		)
+	endif
+
 	install_headers(
 		'options/internal/include/bits/wchar_t.h',
 		'options/internal/include/bits/wchar.h',
@@ -421,6 +437,7 @@ if not no_headers
 		'options/internal/include/bits/threads.h',
 		'options/internal/include/bits/winsize.h',
 		'options/internal/include/bits/search.h',
+		'options/internal/include/bits/getopt.h',
 		subdir: 'bits'
 	)
 endif
@@ -498,14 +515,16 @@ if not headers_only
 		lsb_sources,
 	]
 
-	# Our library have different behaviour when built as static and shared libraries.
+	ld_library_name = get_option('ld_library_name')
+
+	# Our libraries have different behaviour when built as static and shared libraries.
 	# Hence we need to rebuild the object files with a different define for each mode.
 	if library_type in ['static', 'both']
 		static_cpp_args = [
 			'-DMLIBC_STATIC_BUILD',
 			'-DFRIGG_HAVE_LIBC',
 		]
-		ld_static_lib = static_library('ld', rtld_sources,
+		ld_static_lib = static_library(ld_library_name, rtld_sources,
 			name_prefix: '',
 			cpp_args: ld_cpp_args + static_cpp_args,
 			include_directories: rtld_include_dirs,
@@ -522,7 +541,7 @@ if not headers_only
 		)
 	endif
 	if library_type in ['shared', 'both']
-		ld_shared_lib = shared_library('ld', rtld_sources + rtld_dso_sources,
+		ld_shared_lib = shared_library(ld_library_name, rtld_sources + rtld_dso_sources,
 			name_prefix: '',
 			cpp_args: ld_cpp_args,
 			include_directories: rtld_include_dirs,

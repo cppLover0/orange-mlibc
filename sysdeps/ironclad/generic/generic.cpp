@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <sys/ioctl.h>
 #include <asm/ioctls.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,13 +26,9 @@ extern "C" void __mlibc_sigret(void);
 namespace mlibc {
 
 void sys_libc_log(const char *message) {
-#ifdef __MLIBC_DEBUG
 	ssize_t unused;
-	sys_write(2, message, strlen(message), &unused);
-	sys_write(2, "\n", 1, &unused);
-#else
-	(void)message;
-#endif
+	sys_write(1, message, strlen(message), &unused);
+	sys_write(1, "\n", 1, &unused);
 }
 
 void sys_libc_panic() {
@@ -48,8 +45,19 @@ void sys_exit(int status) {
 }
 
 int sys_tcb_set(void *pointer) {
-	int ret, errno;
+	int errno;
+
+#if defined(__x86_64__)
+	int ret;
 	SYSCALL2(SYSCALL_ARCH_PRCTL, 1, pointer);
+#elif defined(__riscv) && __riscv_xlen == 64
+	uintptr_t tp = reinterpret_cast<uintptr_t>(pointer) + sizeof(Tcb);
+	asm volatile("mv tp, %0" : : "r"(tp) : "memory");
+	errno = 0;
+#else
+	#error Unknown architecture
+#endif
+
 	return errno;
 }
 
@@ -157,7 +165,7 @@ int sys_fdatasync(int fd) {
 int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
 	ssize_t ret;
 	int errno;
-	SYSCALL3(SYSCALL_READ, fd, buf, count);
+	SYSCALL5(SYSCALL_READ, fd, buf, count, 0, 0);
 	*bytes_read = ret;
 	return errno;
 }
@@ -165,7 +173,7 @@ int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
 int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
 	ssize_t ret;
 	int errno;
-	SYSCALL3(SYSCALL_WRITE, fd, buf, count);
+	SYSCALL5(SYSCALL_WRITE, fd, buf, count, 0, 0);
 	*bytes_written = ret;
 	return errno;
 }
@@ -173,7 +181,7 @@ int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
 int sys_pread(int fd, void *buf, size_t n, off_t off, ssize_t *bytes_read) {
 	ssize_t ret;
 	int errno;
-	SYSCALL4(SYSCALL_PREAD, fd, buf, n, off);
+	SYSCALL5(SYSCALL_READ, fd, buf, n, off, 1);
 	*bytes_read = ret;
 	return errno;
 }
@@ -181,7 +189,7 @@ int sys_pread(int fd, void *buf, size_t n, off_t off, ssize_t *bytes_read) {
 int sys_pwrite(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_written) {
 	ssize_t ret;
 	int errno;
-	SYSCALL4(SYSCALL_WRITE, fd, buf, n, off);
+	SYSCALL5(SYSCALL_WRITE, fd, buf, n, off, 1);
 	*bytes_written = ret;
 	return errno;
 }
@@ -211,7 +219,6 @@ int sys_fallocate(int fd, off_t offset, size_t size) {
 }
 
 int sys_flock(int fd, int options) {
-	//  XXX: Shouldnt this use F_SETLKW and F_SETLK only when LOCK_NB ?
 	struct flock lock;
 	lock.l_whence = SEEK_SET;
 	lock.l_start = 0;
@@ -232,8 +239,9 @@ int sys_flock(int fd, int options) {
 			return -1;
 	}
 
+	int command = options & LOCK_NB ? F_SETLK : F_SETLKW;
 	int ret, errno;
-	SYSCALL3(SYSCALL_FCNTL, fd, F_SETLK, &lock);
+	SYSCALL3(SYSCALL_FCNTL, fd, command, &lock);
 	return errno;
 }
 
@@ -329,9 +337,10 @@ int sys_vm_protect(void *pointer, size_t size, int prot) {
 }
 
 int sys_getsid(pid_t pid, pid_t *sid) {
-	//  STUB.
-	(void)pid; (void)sid;
-	return 0;
+	int ret, errno;
+	SYSCALL1(SYSCALL_GETSID, pid);
+	*sid = ret;
+	return errno;
 }
 
 pid_t sys_getpid() {
@@ -408,10 +417,16 @@ int sys_isatty(int fd) {
 }
 
 int sys_getpgid(pid_t pid, pid_t *pgid) {
-	(void)pid;
-	// FIXME: Stub needed by mlibc.
-	*pgid = 0;
-	return 0;
+	int ret, errno;
+	SYSCALL1(SYSCALL_GETPGID, pid);
+	*pgid = ret;
+	return errno;
+}
+
+int sys_setpgid(pid_t pid, pid_t pgid) {
+	int ret, errno;
+	SYSCALL2(SYSCALL_SETPGID, pid, pgid);
+	return errno;
 }
 
 int sys_execve(const char *path, char *const argv[], char *const envp[]) {
@@ -433,7 +448,24 @@ int sys_fork(pid_t *child) {
 	pid_t ret;
 	int errno;
 
-	SYSCALL0(SYSCALL_FORK);
+	SYSCALL1(SYSCALL_FORK, 0);
+
+	if (ret == -1) {
+		return errno;
+	}
+
+	if (child != NULL) {
+		*child = ret;
+	}
+
+	return 0;
+}
+
+int sys_vfork(pid_t *child) {
+	pid_t ret;
+	int errno;
+
+	SYSCALL1(SYSCALL_FORK, 1);
 
 	if (ret == -1) {
 		return errno;
@@ -448,15 +480,13 @@ int sys_fork(pid_t *child) {
 
 int sys_getrlimit(int resource, struct rlimit *limit) {
 	uint64_t ret, errno;
-	SYSCALL1(SYSCALL_GETRLIMIT, resource);
-	limit->rlim_cur = ret;
-	limit->rlim_max = ret;
+	SYSCALL3(SYSCALL_RLIMIT, resource, NULL, limit);
 	return errno;
 }
 
 int sys_setrlimit(int resource, const struct rlimit *limit) {
-	int ret, errno;
-	SYSCALL2(SYSCALL_SETRLIMIT, resource, limit->rlim_cur);
+	uint64_t ret, errno;
+	SYSCALL3(SYSCALL_RLIMIT, resource, limit, NULL);
 	return errno;
 }
 
@@ -483,12 +513,6 @@ int sys_uname(struct utsname *buf) {
 	int ret, errno;
 	SYSCALL1(SYSCALL_UNAME, buf);
 	return errno;
-}
-
-int sys_setpgid(pid_t pid, pid_t pgid) {
-	(void)pid;
-	(void)pgid;
-	return 0;
 }
 
 int sys_ttyname(int fd, char *buff, size_t size) {
@@ -541,13 +565,6 @@ int sys_fchdir(int fd) {
 
 int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 	int ret, errno;
-
-	if (request == TIOCGPGRP) {
-		*result = 0;
-		return 0;
-	} else if (request == TIOCSPGRP) {
-		return 0;
-	}
 
 	SYSCALL3(SYSCALL_IOCTL, fd, request, arg);
 
@@ -650,6 +667,12 @@ int sys_tcflow(int fd, int action) {
 int sys_tcflush(int fd, int action) {
 	int ret;
 	return sys_ioctl(fd, TCFLSH, &action, &ret);
+}
+
+int sys_tcdrain(int fd) {
+	int ret;
+	int value = 0;
+	return sys_ioctl(fd, TCSBRKP, &value, &ret);
 }
 
 int sys_access(const char *path, int mode) {
@@ -842,8 +865,10 @@ int sys_getresgid(uid_t *rgid, uid_t *egid, uid_t *sgid) {
 }
 
 int sys_setsid(pid_t *sid) {
-	(void)sid;
-	return 0;
+	int ret, errno;
+	SYSCALL0(SYSCALL_SETSID);
+	*sid = ret;
+	return errno;
 }
 
 #ifndef MLIBC_BUILDING_RTLD
@@ -865,7 +890,7 @@ int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *old
 
 int sys_clone(void *tcb, pid_t *tid_out, void *stack) {
 	 int ret, errno;
-	 SYSCALL5(SYSCALL_CREATE_THREAD, (uintptr_t)__mlibc_thread_entry, 0, stack, tcb, 1);
+	 SYSCALL4(SYSCALL_CREATE_THREAD, (uintptr_t)__mlibc_thread_entry, 0, stack, tcb);
 
 	 if (ret == -1) {
 		  return errno;
@@ -1240,6 +1265,9 @@ int sys_sysconf(int num, long *rret) {
 			} else {
 				return EFAULT;
 			}
+		case _SC_THREAD_STACK_MIN:
+			*rret = 0x1000;
+			return 0;
 		default:
 			return EINVAL;
 	}
@@ -1483,6 +1511,62 @@ int sys_getloadavg(double *samples) {
 	for (int i = 0; i < 3; i++) {
 		samples[i] = samples2[i] / 100.0;
 	}
+	return 0;
+}
+
+int sys_openpty(int *mfd, int *sfd, char *name, const struct termios *ios, const struct winsize *win) {
+	int ret;
+	int fds[2];
+	SYSCALL1(SYSCALL_OPENPTY, fds);
+	if (errno) {
+		return errno;
+	}
+	*mfd = fds[0];
+	*sfd = fds[1];
+
+	if (name != NULL) {
+		name = ttyname(*mfd);
+		if (!name) {
+			return errno;
+		}
+	}
+
+	if (ios == NULL) {
+		struct termios termios = {};
+		termios.c_iflag = BRKINT | IGNPAR | ICRNL | IXON | IMAXBEL;
+		termios.c_oflag = OPOST | ONLCR;
+		termios.c_cflag = CS8 | CREAD;
+		termios.c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE;
+		termios.c_cc[VINTR] = CTRL('C');
+		termios.c_cc[VERASE] = 127; // Delete.
+		termios.c_cc[VEOF] = CTRL('D');
+		termios.c_cc[VSUSP] = CTRL('Z');
+		termios.ibaud = 38400;
+		termios.obaud = 38400;
+		ret = tcsetattr(*mfd, TCSANOW, &termios);
+	} else {
+		ret = tcsetattr(*mfd, TCSANOW, ios);
+	}
+	if (ret) {
+		return errno;
+	}
+
+	if (win == NULL) {
+		struct winsize win_size = {
+			.ws_row = 24,
+			.ws_col = 80,
+			.ws_xpixel = 24 * 16,
+			.ws_ypixel = 80 * 16
+		};
+		ret = ioctl(*mfd, TIOCSWINSZ, &win_size);
+	} else {
+		ret = ioctl(*mfd, TIOCSWINSZ, win);
+	}
+
+	if (ret) {
+		return errno;
+	}
+
 	return 0;
 }
 
