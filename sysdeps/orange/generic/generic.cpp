@@ -307,4 +307,13 @@ int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru, pid_t *ret
     return ret;
 }
 
+int sys_fcntl(int fd, int request, va_list args, int *result) {
+    uint64_t arg = va_arg(args,uint64_t);
+    uint64_t result0;
+    int ret;
+    asm volatile("syscall" : "=a"(ret), "=d"(result0) : "a"(35), "D"(fd), "S"(request), "d"(arg) : "rcx","r11");
+    *result = ret;
+    return ret;
+}
+
 }
