@@ -33,6 +33,10 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
     return ret;
 }
 
+int sys_access(const char *path, int mode) {
+   return 0;
+}
+
 int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
     int ret;
     int64_t br;
