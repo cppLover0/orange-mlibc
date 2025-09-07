@@ -320,4 +320,8 @@ int sys_fcntl(int fd, int request, va_list args, int *result) {
     return ret;
 }
 
+int sys_fsync(int fd) {
+    return 0;
+}
+
 }
