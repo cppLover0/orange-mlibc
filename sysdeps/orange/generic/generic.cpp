@@ -328,4 +328,12 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set,fd_set *except_
     return ENOSYS; 
 }
 
+#include <string.h>
+
+int sys_uname(struct utsname *buf) {
+    memcpy(buf->machine,"orange\0",7);
+    memcpy(buf->sysname,"orange\0",7);
+    return 0;
+}
+
 }
