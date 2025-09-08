@@ -336,4 +336,20 @@ int sys_uname(struct utsname *buf) {
     return 0;
 }
 
+int sys_fchdir(int fd) {
+    int ret = 0;
+    asm volatile("syscall" : "=a"(ret) : "a"(36), "D"(fd) : "rcx","r11");
+    return ret;
+}
+
+int sys_chdir(const char *path) {
+    int fd;
+    int ret = sys_open(path,O_DIRECTORY,O_RDONLY,&fd);
+    if(ret != 9)
+        return ret;
+    int ret0 = sys_fchdir(fd);
+    close(fd);
+    return ret0;
+}
+
 }
