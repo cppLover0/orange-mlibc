@@ -3,6 +3,9 @@
 #include <errno.h>
 #include <fcntl.h>
 
+
+#include <string.h>
+
 namespace mlibc {
 
 int sys_futex_wake(int *pointer) {
@@ -328,8 +331,6 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set,fd_set *except_
     return ENOSYS; 
 }
 
-#include <string.h>
-
 int sys_uname(struct utsname *buf) {
     memcpy(buf->machine,"orange\0",7);
     memcpy(buf->sysname,"orange\0",7);
@@ -345,10 +346,10 @@ int sys_fchdir(int fd) {
 int sys_chdir(const char *path) {
     int fd;
     int ret = sys_open(path,O_DIRECTORY,O_RDONLY,&fd);
-    if(ret != 9)
+    if(ret != 0)
         return ret;
     int ret0 = sys_fchdir(fd);
-    close(fd);
+    sys_close(fd);
     return ret0;
 }
 
