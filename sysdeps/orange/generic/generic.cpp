@@ -371,8 +371,10 @@ int sys_accept(int fd, int *newfd, struct sockaddr *addr_ptr, socklen_t *addr_le
     int ret;
     int newfd0;
     asm volatile("syscall" : "=a"(ret), "=d"(newfd0) : "a"(42), "D"(fd), "S"(addr_ptr), "d"(sizeof(struct shitaddr)) : "rcx","r11");
-    *addr_length = sizeof(struct shitaddr);
-    *newfd = newfd0;
+    if(addr_length)
+        *addr_length = sizeof(struct shitaddr);
+    if(newfd)
+        *newfd = newfd0;
     return ret;
 }
 
