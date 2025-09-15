@@ -362,11 +362,16 @@ int sys_sleep(time_t *secs, long *nanos) {
     return ret;
 }
 
+struct shitaddr {
+	sa_family_t sun_family;
+	char sun_path[108];
+};
+
 int sys_accept(int fd, int *newfd, struct sockaddr *addr_ptr, socklen_t *addr_length, int flags) {
     int ret;
     int newfd0;
-    asm volatile("syscall" : "=a"(ret), "=d"(newfd0) : "a"(42), "D"(fd), "S"(addr_ptr), "d"(sizeof(struct sockaddr_un)) : "rcx","r11");
-    *addr_length = sizeof(struct sockaddr_un);
+    asm volatile("syscall" : "=a"(ret), "=d"(newfd0) : "a"(42), "D"(fd), "S"(addr_ptr), "d"(sizeof(struct shitaddr)) : "rcx","r11");
+    *addr_length = sizeof(struct shitaddr);
     *newfd = newfd0;
     return ret;
 }
