@@ -404,4 +404,18 @@ int sys_listen(int fd, int backlog) {
     return ret;
 }
 
+ssize_t sys_sendto(int fd, const void *buffer, size_t size, int flags, const struct sockaddr *sock_addr, socklen_t addr_length, ssize_t *length) {
+    ssize_t written;
+    int ret = sys_write(fd,buffer,size,&written);
+    *length = written;
+    return ret;
+}
+
+ssize_t sys_recvfrom(int fd, void *buffer, size_t size, int flags, struct sockaddr *sock_addr, socklen_t *addr_length, ssize_t *length) {
+    ssize_t readen;
+    int ret = sys_read(fd,buffer,size,&readen);
+    *length = readen;
+    return ret;
+}
+
 }
