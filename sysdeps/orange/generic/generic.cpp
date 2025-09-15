@@ -396,4 +396,10 @@ int sys_socket(int family, int type, int protocol, int *fd) {
     return ret;
 }
 
+int sys_listen(int fd, int backlog) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(45), "D"(fd), "S"(backlog) : "rcx","r11");
+    return ret;
+}
+
 }
