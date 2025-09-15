@@ -393,7 +393,7 @@ int sys_connect(int fd, const struct sockaddr *addr_ptr, socklen_t addr_length) 
 int sys_socket(int family, int type, int protocol, int *fd) {
     int ret;
     int newfd;
-    asm volatile("syscall" : "=a"(ret) : "a"(44), "D"(family), "S"(type), "d"(protocol) : "rcx","r11");
+    asm volatile("syscall" : "=a"(ret), "=d"(newfd) : "a"(44), "D"(family), "S"(type), "d"(protocol) : "rcx","r11");
     *fd = newfd;
     return ret;
 }
