@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-struct sockaddr {
+struct sockaddr { AF_UNIX
 	sa_family_t sa_family;
 	char sa_data[14];
 };

@@ -362,4 +362,25 @@ int sys_sleep(time_t *secs, long *nanos) {
     return ret;
 }
 
+int sys_accept(int fd, int *newfd, struct sockaddr *addr_ptr, socklen_t *addr_length, int flags) {
+    int ret;
+    int newfd0;
+    asm volatile("syscall" : "=a"(ret), "=d"(newfd0) : "a"(42), "D"(fd), "S"(addr_ptr), "d"(sizeof(struct sockaddr_un)) : "rcx","r11");
+    *addr_length = sizeof(struct sockaddr_un);
+    *newfd = newfd0;
+    return ret;
+}
+
+int sys_bind(int fd, const struct sockaddr *addr_ptr, socklen_t addr_length) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(43), "D"(fd), "S"(addr_ptr), "d"(addr_length) : "rcx","r11");
+    return ret;
+}
+
+int sys_connect(int fd, const struct sockaddr *addr_ptr, socklen_t addr_length) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(41), "D"(fd), "S"(addr_ptr), "d"(addr_length) : "rcx","r11");
+    return ret;
+}
+
 }
