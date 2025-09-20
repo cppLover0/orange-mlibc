@@ -117,7 +117,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
     uint64_t sec;
     uint64_t nano;
     int ret;
-    asm volatile("syscall" : "=a"(ret) : "a"(46), "D"(clock), "S"(sec), "d"(nano) : "rcx","r11");
+    asm volatile("syscall" : "=a"(ret) : "a"(46), "D"(clock), "S"(&sec), "d"(&nano) : "rcx","r11");
     *secs = sec;
     *nanos = nano;
     return ret;
