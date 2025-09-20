@@ -23,7 +23,8 @@ int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
 int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
     int fd0;
     int ret;
-    asm volatile("syscall" : "=a"(ret), "=d"(fd0) : "a"(3), "D"(dirfd), "S"(path), "d"(flags) : "rcx","r11");
+    register uint64_t r8 asm("r8") = mode;
+    asm volatile("syscall" : "=a"(ret), "=d"(fd0) : "a"(3), "D"(dirfd), "S"(path), "d"(flags), "r"(r8) : "rcx","r11");
     *fd = fd0;
     return ret;
 }
@@ -113,7 +114,13 @@ int sys_anon_free(void *pointer, size_t size) {
 }
 
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
-    return ENOSYS;
+    uint64_t sec;
+    uint64_t nano;
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(46), "D"(clock), "S"(sec), "d"(nano) : "rcx","r11");
+    *secs = sec;
+    *nanos = nano;
+    return ret;
 }
 
 int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
@@ -416,6 +423,10 @@ ssize_t sys_recvfrom(int fd, void *buffer, size_t size, int flags, struct sockad
     int ret = sys_read(fd,buffer,size,&readen);
     *length = readen;
     return ret;
+}
+
+int sys_mkfifoat(int dirfd, const char *path, mode_t mode) {
+    
 }
 
 }
