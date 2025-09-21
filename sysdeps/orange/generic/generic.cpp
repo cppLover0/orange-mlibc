@@ -381,7 +381,7 @@ int sys_sleep(time_t *secs, long *nanos) {
     uint64_t current = orange_timestamp();
     uint64_t end = how_much;
     while((orange_timestamp() - current) < end)
-        __nop();
+        asm volatile("nop")
     return 0;
 }
 
