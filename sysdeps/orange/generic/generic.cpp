@@ -359,12 +359,21 @@ int sys_chdir(const char *path) {
     return ret0;
 }
 
+uint64_t orange_timestamp() {
+    uint64_t timestamp;
+    asm volatile("syscall" : "=d"(timestamp) : "a"(46) : "rcx","r11");
+    return timestamp;
+}
+
 int sys_sleep(time_t *secs, long *nanos) {
     int ret;
     long how_much = 0;
-    how_much += (*secs * (1000 * 1000));
-    how_much += (*nanos / 1000);
-    asm volatile("syscall" : "=a"(ret) : "a"(37), "D"(how_much) : "rcx","r11");
+    how_much += ((*secs) * (1000 * 1000));
+    how_much += ((*nanos) / 1000);
+    std::uint64_t current = orange_timestamp();
+    std::uint64_t end = how_much * 1000;
+    while((orange_timestamp() - current) < end);
+        __nop();
     return ret;
 }
 
