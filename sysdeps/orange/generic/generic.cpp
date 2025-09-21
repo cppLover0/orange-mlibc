@@ -432,7 +432,9 @@ ssize_t sys_recvfrom(int fd, void *buffer, size_t size, int flags, struct sockad
 }
 
 int sys_mkfifoat(int dirfd, const char *path, mode_t mode) {
-    
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(47), "D"(dirfd), "S"(path), "d"(mode) : "rcx","r11");
+    return ret;
 }
 
 }
