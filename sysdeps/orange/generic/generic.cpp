@@ -369,6 +369,12 @@ int sys_sleep(time_t *secs, long *nanos) {
     long how_much = 0;
     time_t sec = *secs;
     long nano = *nanos;
+    
+    if(sec < 0)
+        sec = 0;
+    if(nano < 0)
+        nano = 0;
+
     how_much = (sec * 1000 * 1000 * 1000) + nano;
     std::uint64_t current = orange_timestamp();
     std::uint64_t end = how_much;
