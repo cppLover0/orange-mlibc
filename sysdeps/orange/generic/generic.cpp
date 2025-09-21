@@ -115,12 +115,12 @@ int sys_anon_free(void *pointer, size_t size) {
 }
 
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
-    long nano;
-    int sec;
-    asm volatile("syscall" : "=a"(sec), "=d"(nano) : "a"(46) : "rcx","r11");
-    *secs = sec;
-    *nanos = nano % 1000000000;
-    return 0;
+    uint64_t timestamp;
+    int ret;
+    asm volatile("syscall" : "=a"(ret), "=d"(timestamp) : "a"(46) : "rcx","r11");
+    *secs = timestamp / 1000000000;
+    *nanos = timestamp % 1000000000;
+    return ret;
 }
 
 int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
