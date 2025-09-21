@@ -362,7 +362,7 @@ int sys_sleep(time_t *secs, long *nanos) {
     if(nano < 0)
         nano = 0;
 
-    how_much = (sec * 1000 * 1000 * 1000) + nano;
+    how_much = (sec * 1000 * 1000) + (nano / 1000);
     asm volatile("syscall" : : "a"(37), "D"(how_much) : "rcx","r11");
     return 0;
 }
