@@ -380,7 +380,7 @@ int sys_sleep(time_t *secs, long *nanos) {
     how_much = (sec * 1000 * 1000 * 1000) + nano;
     uint64_t current = orange_timestamp();
     uint64_t end = how_much;
-    while((orange_timestamp() - current) < end);
+    while((orange_timestamp() - current) < end)
         __nop();
     return 0;
 }
