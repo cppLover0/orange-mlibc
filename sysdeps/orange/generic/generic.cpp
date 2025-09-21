@@ -330,6 +330,14 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set,fd_set *except_
     return ENOSYS; 
 }
 
+int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
+    return 0;
+}
+
+int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
+    return 0;
+}
+
 int sys_uname(struct utsname *buf) {
     memcpy(buf->machine,"orange\0",7);
     memcpy(buf->sysname,"orange\0",7);
