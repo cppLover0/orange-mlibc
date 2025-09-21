@@ -366,7 +366,6 @@ uint64_t orange_timestamp() {
 }
 
 int sys_sleep(time_t *secs, long *nanos) {
-    int ret;
     long how_much = 0;
     how_much += ((*secs) * (1000 * 1000));
     how_much += ((*nanos) / 1000);
@@ -374,7 +373,7 @@ int sys_sleep(time_t *secs, long *nanos) {
     std::uint64_t end = how_much * 1000;
     while((orange_timestamp() - current) < end);
         __nop();
-    return ret;
+    return 0;
 }
 
 struct shitaddr {
