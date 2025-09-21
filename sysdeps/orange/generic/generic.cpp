@@ -361,7 +361,7 @@ int sys_chdir(const char *path) {
 
 uint64_t orange_timestamp() {
     uint64_t timestamp;
-    asm volatile("syscall" : "=d"(timestamp) : "a"(46) : "rcx","r11");
+    asm volatile("syscall" : "=d"(timestamp) : "a"(46) : "rcx","r11","rax");
     return timestamp;
 }
 
