@@ -367,8 +367,9 @@ uint64_t orange_timestamp() {
 
 int sys_sleep(time_t *secs, long *nanos) {
     long how_much = 0;
-    how_much += ((*secs) * (1000 * 1000));
-    how_much += ((*nanos) / 1000);
+    time_t sec = *secs;
+    long nano = *nanos;
+    how_much = (sec * 1000 * 1000 * 1000) + nano;
     std::uint64_t current = orange_timestamp();
     std::uint64_t end = how_much;
     while((orange_timestamp() - current) < end);
