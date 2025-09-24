@@ -437,4 +437,12 @@ int sys_mkfifoat(int dirfd, const char *path, mode_t mode) {
     return ret;
 }
 
+int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
+    int ret;
+    int num;
+    asm volatile("syscall" : "=a"(ret), "=d"(num) : "a"(48), "D"(fds), "S"(count), "d"(timeout) : "rcx","r11");
+    *num_events = num;
+    return ret;
+}
+
 }
