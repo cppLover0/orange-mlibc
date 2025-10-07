@@ -133,7 +133,7 @@ int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat
     }
 
     int ret;
-    asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(ready_fd), "S"(statbuf) : "rcx", "r11");
+    asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(ready_fd), "S"(statbuf), "d"(flags) : "rcx", "r11");
 
     if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path)
        sys_close(ready_fd);
