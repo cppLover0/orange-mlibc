@@ -225,7 +225,9 @@ int sys_tcsetattr(int fd, int no, const struct termios *attr){
 }
 
 int sys_execve(const char *path, char *const argv[], char *const envp[]) {
-    asm volatile("syscall" : : "a"(29), "D"(path), "S"(argv), "d"(envp): "rcx","r11");
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(29), "D"(path), "S"(argv), "d"(envp): "rcx","r11");
+    return ret; // error
 }
 
 gid_t sys_getgid() {
