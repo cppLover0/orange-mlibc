@@ -342,12 +342,12 @@ int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__r
 }
 
 int sys_uname(struct utsname *buf) {
-    strcpy(buf->sysname, "Orange");
-	strcpy(buf->nodename, "orange");
-	strcpy(buf->release, "idk");
-	strcpy(buf->version, "idk");
+    memcpy(buf->sysname, "Orange",6);
+	memcpy(buf->nodename, "orange",6);
+	memcpy(buf->release, "idk",3);
+	memcpy(buf->version, "idk",3);
 #if defined(__x86_64__)
-	strcpy(buf->machine, "x86_64");
+	memcpy(buf->machine, "x86_64",6);
 #endif
     return 0;
 }
