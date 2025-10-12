@@ -455,7 +455,7 @@ int sys_readlinkat(int dirfd, const char *path, void *buffer, size_t max_size, s
     int ret;
     ssize_t len;
     register uint64_t r8 asm("r8") = max_size;
-    asm volatile("syscall" : "=a"(ret), "=d"(len), "a"(49), "D"(dirfd), "S"(path), "d"(buffer), "r"(r8) : "rcx", "r11");
+    asm volatile("syscall" : "=a"(ret), "=d"(len) : "a"(49), "D"(dirfd), "S"(path), "d"(buffer), "r"(r8) : "rcx", "r11");
     *length = len;
     return ret;
 }
