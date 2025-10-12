@@ -347,6 +347,7 @@ int sys_uname(struct utsname *buf) {
 	strcpy(buf->version, "idk");
 #if defined(__x86_64__)
 	strcpy(buf->machine, "x86_64");
+#endif
     return 0;
 }
 
