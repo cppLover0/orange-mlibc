@@ -472,4 +472,12 @@ int sys_link(const char *old_path, const char *new_path) {
     return ret;
 }
 
+int sys_unlinkat(int fd, const char *path, int flags) {
+    return 0;
+}
+
+int sys_fchmod(int fd, mode_t mode) {
+    return 0;
+}
+
 }
