@@ -480,4 +480,14 @@ int sys_fchmod(int fd, mode_t mode) {
     return 0;
 }
 
+int sys_mkdir(const char *path, mode_t mode) {
+    return sys_mkdirat(AT_FDCWD,path,mode);
+}
+
+int sys_mkdirat(int dirfd, const char *path, mode_t mode) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(51), "D"(dirfd), "S"(path), "d"(mode) : "rcx","r11");
+    return ret;
+}
+
 }
