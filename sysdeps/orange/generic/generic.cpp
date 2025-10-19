@@ -466,4 +466,10 @@ int sys_readlinkat(int dirfd, const char *path, void *buffer, size_t max_size, s
     return ret;
 }
 
+int sys_link(const char *old_path, const char *new_path) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(50), "D"(old_path), "S"(new_path) : "rcx","r11");
+    return ret;
+}
+
 }
