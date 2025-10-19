@@ -490,4 +490,10 @@ int sys_mkdirat(int dirfd, const char *path, mode_t mode) {
     return ret;
 }
 
+int sys_chmod(const char *pathname, mode_t mode) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(52), "D"(pathname), "S"(mode) : "rcx","r11");
+    return ret;
+}
+
 }
