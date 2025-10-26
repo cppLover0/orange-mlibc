@@ -532,17 +532,18 @@ int sys_prepare_stack(
 	return 0;
 }
 
+#include <mlibc/tcb.hpp>
+
 extern "C" void __mlibc_start_thread(void *entry, void *user_arg, Tcb *tcb) {
 	// Wait until our parent sets up the TID.
 	while (!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
 		sys_futex_wait(&tcb->tid, 0, nullptr);
 
-	if (sys_tcb_set(tcb))
-		__ensure(!"sys_tcb_set() failed");
-
+	sys_tcb_set(tcb)
+		
 	tcb->invokeThreadFunc(entry, user_arg);
 
-	auto self = reinterpret_cast<Tcb *>(tcb);
+	auto self = (Tcb*)(tcb);
 
 	__atomic_store_n(&self->didExit, 1, __ATOMIC_RELEASE);
 	sys_futex_wake(&self->didExit);
