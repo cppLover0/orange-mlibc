@@ -14,18 +14,18 @@
 extern "C" void __mlibc_start_thread(void *entry, void *user_arg, Tcb *tcb) {
 	// Wait until our parent sets up the TID.
 	while (!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
-		sys_futex_wait(&tcb->tid, 0, nullptr);
+		mlibc::sys_futex_wait(&tcb->tid, 0, nullptr);
 
-	sys_tcb_set(tcb)
+	mlibc::sys_tcb_set(tcb)
 		
 	tcb->invokeThreadFunc(entry, user_arg);
 
 	auto self = (Tcb*)(tcb);
 
 	__atomic_store_n(&self->didExit, 1, __ATOMIC_RELEASE);
-	sys_futex_wake(&self->didExit);
+	mlibc::sys_futex_wake(&self->didExit);
 
-	sys_thread_exit();
+	mlibc::sys_thread_exit();
 }
 
 namespace mlibc {
