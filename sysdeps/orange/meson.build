@@ -12,7 +12,8 @@ rtld_sources += files(
 libc_sources += files(
 	'generic/entry.cpp',
 	'generic/generic.cpp',
-	'generic/thread.cpp'
+	'generic/thread.cpp',
+	'x86_64/thread.S'
 )
 
 if not no_headers

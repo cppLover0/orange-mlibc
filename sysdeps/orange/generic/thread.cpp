@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <sys/mman.h>
 
-extern "C" void __mlibc_start_thread(void *entry, void *user_arg, Tcb *tcb) {
+extern "C" void __mlibc_enter_thread(void *entry, void *user_arg, Tcb *tcb) {
 	// Wait until our parent sets up the TID.
 	while (!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
 		mlibc::sys_futex_wait(&tcb->tid, 0, nullptr);
@@ -27,6 +27,8 @@ extern "C" void __mlibc_start_thread(void *entry, void *user_arg, Tcb *tcb) {
 
 	mlibc::sys_thread_exit();
 }
+
+extern "C" void __mlibc_start_thread();
 
 namespace mlibc {
 
