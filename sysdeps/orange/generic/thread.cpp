@@ -16,7 +16,7 @@ extern "C" void __mlibc_start_thread(void *entry, void *user_arg, Tcb *tcb) {
 	while (!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
 		mlibc::sys_futex_wait(&tcb->tid, 0, nullptr);
 
-	mlibc::sys_tcb_set(tcb)
+	mlibc::sys_tcb_set(tcb);
 		
 	tcb->invokeThreadFunc(entry, user_arg);
 
