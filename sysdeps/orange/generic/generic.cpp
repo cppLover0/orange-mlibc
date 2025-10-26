@@ -516,8 +516,7 @@ int sys_prepare_stack(
 	if (*stack) {
 		*stack_base = *stack;
 	} else {
-		*stack_base =
-		    mmap(nullptr, *stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		sys_anon_allocate(*stack_size,(void**)stack_base);
 		if (*stack_base == MAP_FAILED) {
 			return EFAULT;
 		}
@@ -533,7 +532,23 @@ int sys_prepare_stack(
 	return 0;
 }
 
-extern "C" void __mlibc_start_thread();
+extern "C" void __mlibc_start_thread(void *entry, void *user_arg, Tcb *tcb) {
+	// Wait until our parent sets up the TID.
+	while (!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
+		sys_futex_wait(&tcb->tid, 0, nullptr);
+
+	if (sys_tcb_set(tcb))
+		__ensure(!"sys_tcb_set() failed");
+
+	tcb->invokeThreadFunc(entry, user_arg);
+
+	auto self = reinterpret_cast<Tcb *>(tcb);
+
+	__atomic_store_n(&self->didExit, 1, __ATOMIC_RELEASE);
+	sys_futex_wake(&self->didExit);
+
+	sys_thread_exit();
+}
 
 int sys_clone(void *tcb, pid_t *pid_out, void *stack) { 
     int pid;
