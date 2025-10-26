@@ -496,4 +496,50 @@ int sys_chmod(const char *pathname, mode_t mode) {
     return ret;
 }
 
+static constexpr size_t default_stacksize = 0x200000;
+
+int sys_prepare_stack(
+    void **stack,
+    void *entry,
+    void *user_arg,
+    void *tcb,
+    size_t *stack_size,
+    size_t *guard_size,
+    void **stack_base
+) {
+	if (!*stack_size)
+		*stack_size = default_stacksize;
+	*guard_size = 0;
+
+	if (*stack) {
+		*stack_base = *stack;
+	} else {
+		*stack_base =
+		    mmap(nullptr, *stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		if (*stack_base == MAP_FAILED) {
+			return errno;
+		}
+	}
+
+	unsigned long long* sp =
+	    reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned long long>(*stack_base) + *stack_size);
+
+	*--sp = reinterpret_cast<unsigned long long>(tcb);
+	*--sp = reinterpret_cast<unsigned long long>(user_arg);
+	*--sp = reinterpret_cast<unsigned long long>(entry);
+	*stack = reinterpret_cast<void *>(sp);
+	return 0;
+}
+
+extern "C" void __mlibc_thread_entry();
+
+int sys_clone(void *tcb, pid_t *pid_out, void *stack) { 
+    int pid;
+    int ret;
+    uint64_t entry = (uint64_t)__mlibc_thread_entry;
+    asm volatile("syscall" : "=a"(ret), "D"(pid) : "a"(54), "D"(stack) , "S"(entry), "d"(0) : "rcx","r11");
+    *pid_out = pid;
+    return ret;
+}
+
 }

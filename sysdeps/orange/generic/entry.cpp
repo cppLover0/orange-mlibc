@@ -4,6 +4,13 @@
 #include <mlibc/elf/startup.h>
 #include <mlibc/debug.hpp>
 
+#include <errno.h>
+#include <mlibc/all-sysdeps.hpp>
+#include <mlibc/tcb.hpp>
+#include <mlibc/thread-entry.hpp>
+#include <stddef.h>
+#include <sys/mman.h>
+
 extern "C" void __dlapi_enter(uintptr_t *);
 
 extern char **environ;
@@ -15,3 +22,20 @@ extern "C" void __mlibc_entry(uintptr_t *entry_stack, int (*main_fn)(int argc, c
 	exit(result);
 }
 
+extern "C" void __mlibc_enter_thread(void *entry, void *user_arg, Tcb *tcb) {
+	// Wait until our parent sets up the TID.
+	while (!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
+		mlibc::sys_futex_wait(&tcb->tid, 0, nullptr);
+
+	if (mlibc::sys_tcb_set(tcb))
+		__ensure(!"sys_tcb_set() failed");
+
+	tcb->invokeThreadFunc(entry, user_arg);
+
+	auto self = reinterpret_cast<Tcb *>(tcb);
+
+	__atomic_store_n(&self->didExit, 1, __ATOMIC_RELEASE);
+	mlibc::sys_futex_wake(&self->didExit);
+
+	mlibc::sys_thread_exit();
+}
