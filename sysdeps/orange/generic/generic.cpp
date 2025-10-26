@@ -93,6 +93,11 @@ void sys_thread_exit() {
     sys_exit(0);
 }
 
+int sys_thread_setname(void *tcb, const char *name) {
+    mlibc::infoLogger() << "The name of this thread is " << name << frg::endlog;
+    return 0;
+}
+
 void sys_libc_panic() {
     sys_libc_log("mlibc panic\n");
     sys_exit(-1);
