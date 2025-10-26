@@ -11,24 +11,24 @@
 #include <stddef.h>
 #include <sys/mman.h>
 
+
 extern "C" void __mlibc_enter_thread(void *entry, void *user_arg, Tcb *tcb) {
 	// Wait until our parent sets up the TID.
 	while (!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
 		mlibc::sys_futex_wait(&tcb->tid, 0, nullptr);
 
-	mlibc::sys_tcb_set(tcb);
-		
+	if (mlibc::sys_tcb_set(tcb))
+		__ensure(!"sys_tcb_set() failed");
+
 	tcb->invokeThreadFunc(entry, user_arg);
 
-	auto self = (Tcb*)(tcb);
+	auto self = reinterpret_cast<Tcb *>(tcb);
 
 	__atomic_store_n(&self->didExit, 1, __ATOMIC_RELEASE);
 	mlibc::sys_futex_wake(&self->didExit);
 
 	mlibc::sys_thread_exit();
 }
-
-extern "C" void __mlibc_start_thread();
 
 namespace mlibc {
 
@@ -66,15 +66,5 @@ int sys_prepare_stack(
 	*stack = reinterpret_cast<void *>(sp);
 	return 0;
 }
-
-int sys_clone(void *tcb, pid_t *pid_out, void *stack) { 
-    int pid;
-    int ret;
-    uint64_t entry = (uint64_t)__mlibc_start_thread;
-    asm volatile("syscall" : "=a"(ret), "=D"(pid) : "a"(54), "D"(stack) , "S"(entry), "d"(0) : "rcx","r11");
-    *pid_out = pid;
-    return ret;
-}
-
 
 } // namespace mlibc
