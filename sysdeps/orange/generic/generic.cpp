@@ -533,12 +533,12 @@ int sys_prepare_stack(
 	return 0;
 }
 
-extern "C" void __mlibc_thread_entry();
+extern "C" void __mlibc_start_thread();
 
 int sys_clone(void *tcb, pid_t *pid_out, void *stack) { 
     int pid;
     int ret;
-    uint64_t entry = (uint64_t)__mlibc_thread_entry;
+    uint64_t entry = (uint64_t)__mlibc_start_thread;
     asm volatile("syscall" : "=a"(ret), "=D"(pid) : "a"(54), "D"(stack) , "S"(entry), "d"(0) : "rcx","r11");
     *pid_out = pid;
     return ret;
