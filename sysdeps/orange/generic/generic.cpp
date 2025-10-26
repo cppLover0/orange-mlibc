@@ -89,6 +89,10 @@ void sys_exit(int status) {
     asm volatile("syscall" : : "a"(10), "D"(status) : "rcx","r11");
 }
 
+void sys_thread_exit() {
+    sys_exit(0);
+}
+
 void sys_libc_panic() {
     sys_libc_log("mlibc panic\n");
     sys_exit(-1);
