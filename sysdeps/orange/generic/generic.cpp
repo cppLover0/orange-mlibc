@@ -519,17 +519,17 @@ int sys_prepare_stack(
 		*stack_base =
 		    mmap(nullptr, *stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		if (*stack_base == MAP_FAILED) {
-			return errno;
+			return EFAULT;
 		}
 	}
 
 	unsigned long long* sp =
-	    reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned long long>(*stack_base) + *stack_size);
+	    (unsigned long long*)((unsigned long long)(*stack_base) + *stack_size);
 
-	*--sp = reinterpret_cast<unsigned long long>(tcb);
-	*--sp = reinterpret_cast<unsigned long long>(user_arg);
-	*--sp = reinterpret_cast<unsigned long long>(entry);
-	*stack = reinterpret_cast<void *>(sp);
+	*--sp = (unsigned long long)(tcb);
+	*--sp = (unsigned long long)(user_arg);
+	*--sp = (unsigned long long)(entry);
+	*stack =(void*)(sp);
 	return 0;
 }
 
