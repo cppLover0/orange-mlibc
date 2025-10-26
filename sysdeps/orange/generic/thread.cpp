@@ -67,6 +67,7 @@ int sys_prepare_stack(
 	return 0;
 }
 
+extern "C" void __mlibc_start_thread();
 
 int sys_clone(void *tcb, pid_t *pid_out, void *stack) { 
     int pid;
