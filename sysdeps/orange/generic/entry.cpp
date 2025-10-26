@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <mlibc/all-sysdeps.hpp>
 #include <mlibc/tcb.hpp>
-#include <mlibc/thread-entry.hpp>
 #include <stddef.h>
 #include <sys/mman.h>
 
