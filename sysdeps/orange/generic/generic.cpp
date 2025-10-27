@@ -319,7 +319,7 @@ int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru, pid_t *ret
     uint64_t final;
     int status0;
     int retpid;
-    asm volatile("syscall" : "=a"(ret), "=d"(final) : "a"(34), "D"(pid) : "rcx","r11");
+    asm volatile("syscall" : "=a"(ret), "=d"(final) : "a"(34), "D"(pid), "S"(flags) : "rcx","r11");
     status0 = final >> 32;
     retpid = final & 0xFFFFFFFF;
     *status = status0;
