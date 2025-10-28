@@ -450,6 +450,36 @@ ssize_t sys_recvfrom(int fd, void *buffer, size_t size, int flags, struct sockad
     return ret;
 }
 
+int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
+    ssize_t written = 0;
+    int ret = 0;
+    for(int i = 0;i < hdr->msg_iovlen;i++) {
+        ssize_t hello;
+        int ret0;
+        ret0 = sys_sendto(fd,(const void*)hdr->msg_iov[i].iov_base,hdr->msg_iov[i].iov_len,0,0,0,&hello);
+        if(ret0 != 0)
+            ret = ret0;
+        written += hello;
+    }
+    *length = written;
+    return ret;
+}
+
+int sys_msg_recv(int fd, struct msghdr *hdr, int flags, ssize_t *length) {
+    ssize_t written = 0;
+    int ret = 0;
+    for(int i = 0;i < hdr->msg_iovlen;i++) {
+        ssize_t hello;
+        int ret0;
+        ret0 = sys_recvfrom(fd,(void*)hdr->msg_iov[i].iov_base,hdr->msg_iov[i].iov_len,0,0,0,&hello);
+        if(ret0 != 0)
+            ret = ret0;
+        written += hello;
+    }
+    *length = written;
+    return ret;
+}
+
 int sys_mkfifoat(int dirfd, const char *path, mode_t mode) {
     int ret;
     asm volatile("syscall" : "=a"(ret) : "a"(47), "D"(dirfd), "S"(path), "d"(mode) : "rcx","r11");
