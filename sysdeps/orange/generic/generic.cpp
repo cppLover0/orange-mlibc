@@ -458,7 +458,7 @@ int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
 }
 
 int sys_msg_recv(int fd, struct msghdr *hdr, int flags, ssize_t *length) {
-    size_t readen;
+    ssize_t readen;
     int ret = sys_recvfrom(fd,hdr->msg_name,hdr->msg_namelen,0,0,0,&readen);
     *length = readen;
     return 0;
