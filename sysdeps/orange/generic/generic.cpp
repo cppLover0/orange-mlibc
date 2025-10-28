@@ -458,70 +458,10 @@ int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
         int res = sys_write(fd, hdr->msg_iov[i].iov_base, hdr->msg_iov[i].iov_len, &sent_bytes);
         if (res != 0) {
             ret = res; 
-            break; 
+            break;
         }
         total_written += sent_bytes;
         if (sent_bytes < hdr->msg_iov[i].iov_len) {
-            break; 
-        }
-    }
-    *length = total_written;
-    return ret;
-}
-
-В вашем коде есть несколько моментов, которые требуют исправления или уточнения:
-
-    В функциях sys_msg_send и sys_msg_recv используется sys_sendto и sys_recvfrom с неподдерживаемыми аргументами (например, 0 вместо struct sockaddr * и socklen_t). Также, предполагается, что эти функции внутренняя реализация, которая пишет/читает из буфера, похожего на write() и read(), но с интерфейсом, похожим на sendto и recvfrom.
-
-    В оригинальных системных вызовах sendto и recvfrom требуют указания адреса (struct sockaddr * и длины). В вашем случае, поскольку предполагается, что будет использоваться write() и read() (или их аналоги), эти аргументы лишние или должны быть реализованы внутри ваших функций.
-
-    В вашем коде нет проверок ошибок после вызова внутренних функций. Это важно для правильной обработки ошибок.
-
-    Переменные hello (размер данных) — логично, чтобы они были ssize_t, и правильно использовать их для подсчёта общего количества переданных/принятых байт.
-
-Исправленная версия с учетом указаний:
-
-Поскольку вы говорите, что внутри функции происходит лишь вызов write() или read(), вам нужно реализовать так называемые "замены" для sys_sendto и sys_recvfrom, которые вместо sendto/recvfrom, используют write()/read() без указания адреса, и внутренне предполагают, что сокет – это файл.
-
-Вот пример исправленного варианта:
-c
-
-// Предположим, что sys_write и sys_read реализуют соответствующие internal вызовы.
-// В реальности это могут быть просто вызовы write() и read(), если это универсальный сокет-драйвер.
-
-// Эмуляция внутренней функции, которая пишет из буфера в файл (или сокет)
-int sys_write(int fd, const void *buf, size_t count, ssize_t *written) {
-    ssize_t ret = write(fd, buf, count); // или вызов вашей низкоуровневой функции
-    if (ret < 0) {
-        return -1; // или подходящий код ошибки
-    }
-    *written = ret;
-    return 0;
-}
-
-// Аналогично для чтения
-int sys_read(int fd, void *buf, size_t count, ssize_t *read_bytes) {
-    ssize_t ret = read(fd, buf, count);
-    if (ret < 0) {
-        return -1; // или подходящий код ошибки
-    }
-    *read_bytes = ret;
-    return 0;
-}
-
-int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
-    ssize_t total_written = 0;
-    int ret = 0;
-    for (int i = 0; i < hdr->msg_iovlen; i++) {
-        ssize_t sent_bytes = 0;
-        int res = sys_write(fd, hdr->msg_iov[i].iov_base, hdr->msg_iov[i].iov_len, &sent_bytes);
-        if (res != 0) {
-            ret = res; // ошибка
-            break; // прервать цикл при ошибке
-        }
-        total_written += sent_bytes;
-        if (sent_bytes < hdr->msg_iov[i].iov_len) {
-            // Не завершена отправка всей части, можно прервать или продолжить в зависимости от логики
             break; 
         }
     }
