@@ -450,20 +450,6 @@ ssize_t sys_recvfrom(int fd, void *buffer, size_t size, int flags, struct sockad
     return ret;
 }
 
-int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
-    ssize_t readen;
-    int ret = sys_sendto(fd,hdr->msg_name,hdr->msg_namelen,0,0,0,&readen);
-    *length = readen;
-    return ret;
-}
-
-int sys_msg_recv(int fd, struct msghdr *hdr, int flags, ssize_t *length) {
-    ssize_t readen;
-    int ret = sys_recvfrom(fd,hdr->msg_name,hdr->msg_namelen,0,0,0,&readen);
-    *length = readen;
-    return 0;
-}
-
 int sys_mkfifoat(int dirfd, const char *path, mode_t mode) {
     int ret;
     asm volatile("syscall" : "=a"(ret) : "a"(47), "D"(dirfd), "S"(path), "d"(mode) : "rcx","r11");
