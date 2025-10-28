@@ -509,9 +509,6 @@ int sys_read(int fd, void *buf, size_t count, ssize_t *read_bytes) {
     return 0;
 }
 
-Исправленный код sys_msg_send:
-c
-
 int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
     ssize_t total_written = 0;
     int ret = 0;
@@ -531,9 +528,6 @@ int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
     *length = total_written;
     return ret;
 }
-
-Аналогично для sys_msg_recv:
-c
 
 int sys_msg_recv(int fd, struct msghdr *hdr, int flags, ssize_t *length) {
     ssize_t total_read = 0;
