@@ -556,7 +556,7 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 
     long timeout_ms = (long)(timeout->tv_sec * 1000 + timeout->tv_nsec / 1000000);
 
-    int ret = sys_poll(pfds,num_fds,timeout_ms,num_events)
+    int ret = sys_poll(pfds,num_fds,timeout_ms,num_events);
 
     return ret;
 }
