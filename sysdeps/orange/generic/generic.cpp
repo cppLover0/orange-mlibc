@@ -560,4 +560,8 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
     return ENOSYS;
 }
 
+int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags) {
+    return 0;
+}
+
 }
