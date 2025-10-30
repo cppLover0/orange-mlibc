@@ -544,6 +544,8 @@ int sys_chmod(const char *pathname, mode_t mode) {
     return ret;
 }
 
+#ifndef MLIBC_BUILDING_RTLD
+
 // tbh i used astral sysdep just cuz i dont have idea how select() works
 int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except_set, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
 	pollfd *fds = (pollfd *)malloc(num_fds * sizeof(pollfd));
@@ -576,7 +578,12 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 	}
 
 	int num;
-	int err = sys_poll(fds, actual_count, (timeout->tv_sec * 1000) + (timeout->tv_nsec / (1000 * 1000)), &num);
+	int err;
+
+    if(timeout)
+        err = sys_poll(fds, actual_count, (timeout->tv_sec * 1000) + (timeout->tv_nsec / (1000 * 1000)), &num);
+    else
+        err = sys_poll(fds, actual_count, -1, &num);
 
 	if(err) {
 		free(fds);
@@ -607,6 +614,8 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 	free(fds);
 	return 0;
 }
+
+#endif
 
 int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags) {
     return 0;
