@@ -7,6 +7,8 @@
 
 #include <sys/mman.h>
 
+#include <sys/select.h>
+
 #include <stdio.h>
 #include <string.h>
 
