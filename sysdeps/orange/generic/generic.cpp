@@ -585,7 +585,7 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
     } else {
         err = sys_poll(fds, actual_count, -1, &num);
     }
-    
+
 	if(err) {
 		free(fds);
 		return err;
@@ -620,6 +620,12 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 
 int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags) {
     return 0;
+}
+
+int sys_ttyname(int fd, char *buf, size_t size) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(56), "D"(fd), "S"(buf), "d"(size) : "rcx","r11");
+    return ret;
 }
 
 }
