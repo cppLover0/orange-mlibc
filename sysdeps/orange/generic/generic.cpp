@@ -538,6 +538,17 @@ int sys_chmod(const char *pathname, mode_t mode) {
     return ret;
 }
 
+#define __NFDBITS           (sizeof(long) * CHAR_BIT) 
+#define __FDELT(d)          ((d) / __NFDBITS)      
+#define __FDMASK(d)         (1UL << ((d) % __NFDBITS)) 
+
+#define FD_SETSIZE          1024                  
+
+#define FD_ZERO(set) memset((void *)(set), 0, sizeof(*(set)))
+#define FD_CLR(fd, set) ((set)->fds_bits[__FDELT(fd)] &= ~(__FDMASK(fd)))
+#define FD_SET(fd, set) ((set)->fds_bits[__FDELT(fd)] |= (__FDMASK(fd)))
+#define FD_ISSET(fd, set) (((set)->fds_bits[__FDELT(fd)] & __FDMASK(fd)) != 0)
+
 int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except_set, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
     if (!num_fds || !read_set && !write_set && !except_set) return -EINVAL;
 
