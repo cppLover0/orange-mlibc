@@ -139,12 +139,18 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
 
 int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
     int ready_fd = fd;
-    int ret;
 
     if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path) {
-        asm volatile("syscall" : "=a"(ret) : "a"(55), "D"(path), "S"(statbuf), "d"(flags) : "rcx","r11");
-    } else
-        asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(ready_fd), "S"(statbuf), "d"(flags) : "rcx", "r11");
+      int ret1 = sys_open(path,0,0,&ready_fd);
+      if(ret1)
+         return ret1;
+    }
+
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(ready_fd), "S"(statbuf), "d"(flags) : "rcx", "r11");
+
+    if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path)
+       sys_close(ready_fd);
 
     return ret;
 }
@@ -538,36 +544,36 @@ int sys_chmod(const char *pathname, mode_t mode) {
     return ret;
 }
 
-// #define __NFDBITS           (sizeof(long) * CHAR_BIT) 
-// #define __FDELT(d)          ((d) / __NFDBITS)      
-// #define __FDMASK(d)         (1UL << ((d) % __NFDBITS)) 
+#define __NFDBITS           (sizeof(long) * CHAR_BIT) 
+#define __FDELT(d)          ((d) / __NFDBITS)      
+#define __FDMASK(d)         (1UL << ((d) % __NFDBITS)) 
 
-// #define FD_SETSIZE          1024                  
+#define FD_SETSIZE          1024                  
 
-// #define FD_ZERO(set) memset((void *)(set), 0, sizeof(*(set)))
-// #define FD_CLR(fd, set) ((set)->fds_bits[__FDELT(fd)] &= ~(__FDMASK(fd)))
-// #define FD_SET(fd, set) ((set)->fds_bits[__FDELT(fd)] |= (__FDMASK(fd)))
-// #define FD_ISSET(fd, set) (((set)->fds_bits[__FDELT(fd)] & __FDMASK(fd)) != 0)
+#define FD_ZERO(set) memset((void *)(set), 0, sizeof(*(set)))
+#define FD_CLR(fd, set) ((set)->fds_bits[__FDELT(fd)] &= ~(__FDMASK(fd)))
+#define FD_SET(fd, set) ((set)->fds_bits[__FDELT(fd)] |= (__FDMASK(fd)))
+#define FD_ISSET(fd, set) (((set)->fds_bits[__FDELT(fd)] & __FDMASK(fd)) != 0)
 
-// int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except_set, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
-//     if (!num_fds || !read_set && !write_set && !except_set) return -EINVAL;
+int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except_set, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
+    if (!num_fds || !read_set && !write_set && !except_set) return -EINVAL;
 
-//     struct pollfd pfds[num_fds];
-//     int i = 0;
+    struct pollfd pfds[num_fds];
+    int i = 0;
 
-//     for (i = 0; i < num_fds; ++i) {
-//         pfds[i].fd = i;
-//         pfds[i].events = 0;
-//         if (FD_ISSET(i, read_set))      pfds[i].events |= POLLIN;
-//         if (FD_ISSET(i, write_set))     pfds[i].events |= POLLOUT;
-//         if (FD_ISSET(i, except_set))    pfds[i].events |= POLLPRI | POLLERR;
-//     }
+    for (i = 0; i < num_fds; ++i) {
+        pfds[i].fd = i;
+        pfds[i].events = 0;
+        if (FD_ISSET(i, read_set))      pfds[i].events |= POLLIN;
+        if (FD_ISSET(i, write_set))     pfds[i].events |= POLLOUT;
+        if (FD_ISSET(i, except_set))    pfds[i].events |= POLLPRI | POLLERR;
+    }
 
-//     long timeout_ms = (long)(timeout->tv_sec * 1000 + timeout->tv_nsec / 1000000);
+    long timeout_ms = (long)(timeout->tv_sec * 1000 + timeout->tv_nsec / 1000000);
 
-//     int ret = sys_poll(pfds,num_fds,timeout_ms,num_events);
+    int ret = sys_poll(pfds,num_fds,timeout_ms,num_events);
 
-//     return ret;
-// }
+    return ret;
+}
 
 }
