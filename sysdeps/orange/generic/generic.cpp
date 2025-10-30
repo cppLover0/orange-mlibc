@@ -540,4 +540,25 @@ int sys_chmod(const char *pathname, mode_t mode) {
     return ret;
 }
 
+int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except_set, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
+    if (!num_fds || !read_set && !write_set && !except_set) return -EINVAL;
+
+    struct pollfd pfds[num_fds];
+    int i = 0;
+
+    for (i = 0; i < num_fds; ++i) {
+        pfds[i].fd = i;
+        pfds[i].events = 0;
+        if (FD_ISSET(i, read_set))      pfds[i].events |= POLLIN;
+        if (FD_ISSET(i, write_set))     pfds[i].events |= POLLOUT;
+        if (FD_ISSET(i, except_set))    pfds[i].events |= POLLPRI | POLLERR;
+    }
+
+    long timeout_ms = (long)(timeout->tv_sec * 1000 + timeout->tv_nsec / 1000000);
+
+    int ret = sys_poll(pfds,num_fds,timeout_ms,num_events)
+
+    return ret;
+}
+
 }
