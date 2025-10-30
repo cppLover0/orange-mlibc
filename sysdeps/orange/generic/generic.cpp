@@ -1,16 +1,16 @@
-#include <mlibc/all-sysdeps.hpp>
+#include <bits/ensure.h>
 #include <mlibc/debug.hpp>
+#include <mlibc/all-sysdeps.hpp>
 #include <errno.h>
-#include <fcntl.h>
-
-#include <unistd.h>
-
-#include <sys/mman.h>
-
-#include <sys/select.h>
-
-#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <asm/ioctls.h>
+#include <poll.h>
+#include <sys/select.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <dirent.h>
 
 namespace mlibc {
 
@@ -544,20 +544,68 @@ int sys_chmod(const char *pathname, mode_t mode) {
     return ret;
 }
 
-#define __NFDBITS           (sizeof(long) * CHAR_BIT) 
-#define __FDELT(d)          ((d) / __NFDBITS)      
-#define __FDMASK(d)         (1UL << ((d) % __NFDBITS)) 
-
-#define FD_SETSIZE          1024                  
-
-#define FD_ZERO(set) memset((void *)(set), 0, sizeof(*(set)))
-#define FD_CLR(fd, set) ((set)->fds_bits[__FDELT(fd)] &= ~(__FDMASK(fd)))
-#define FD_SET(fd, set) ((set)->fds_bits[__FDELT(fd)] |= (__FDMASK(fd)))
-#define FD_ISSET(fd, set) (((set)->fds_bits[__FDELT(fd)] & __FDMASK(fd)) != 0)
-
+// tbh i used astral sysdep just cuz i dont have idea how select() works
 int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except_set, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
-    mlibc::infoLogger() << "pselect num_fds " << num_fds << frg::endlog;
-    return ENOSYS;
+	pollfd *fds = (pollfd *)malloc(num_fds * sizeof(pollfd));
+
+	if(fds == NULL)
+			return ENOMEM;
+
+	int actual_count = 0;
+
+	for(int fd = 0; fd < num_fds; ++fd) {
+		short events = 0;
+		if(read_set && FD_ISSET(fd, read_set)) {
+			events |= POLLIN;
+		}
+
+		if(write_set && FD_ISSET(fd, write_set)) {
+			events |= POLLOUT;
+		}
+
+		if(except_set && FD_ISSET(fd, except_set)) {
+			events |= POLLIN;
+		}
+
+		if(events) {
+			fds[actual_count].fd = fd;
+			fds[actual_count].events = events;
+			fds[actual_count].revents = 0;
+			actual_count++;
+		}
+	}
+
+	int num;
+	int err = sys_poll(fds, actual_count, (timeout->tv_sec * 1000) + (timeout->tv_nsec / (1000 * 1000)), &num);
+
+	if(err) {
+		free(fds);
+		return err;
+	}
+
+	#define READ_SET_POLLSTUFF (POLLIN | POLLHUP | POLLERR)
+	#define WRITE_SET_POLLSTUFF (POLLOUT | POLLERR)
+	#define EXCEPT_SET_POLLSTUFF (POLLPRI)
+
+	int return_count = 0;
+	for(int fd = 0; fd < actual_count; ++fd) {
+		int events = fds[fd].events;
+		if((events & POLLIN) && (fds[fd].revents & READ_SET_POLLSTUFF) == 0) {
+			FD_CLR(fds[fd].fd, read_set);
+			events &= ~POLLIN;
+		}
+
+		if((events & POLLOUT) && (fds[fd].revents & WRITE_SET_POLLSTUFF) == 0) {
+			FD_CLR(fds[fd].fd, write_set);
+			events &= ~POLLOUT;
+		}
+
+		if(events)
+			return_count++;
+	}
+	*num_events = return_count;
+	free(fds);
+	return 0;
 }
 
 int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags) {
