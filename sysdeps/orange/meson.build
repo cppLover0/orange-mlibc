@@ -6,7 +6,7 @@ sysdep_supported_options = {
 }
 
 rtld_sources += files(
-	'generic/generic.cpp'
+	'generic/rtld.cpp'
 )
 
 libc_sources += files(
