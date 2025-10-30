@@ -334,10 +334,6 @@ int sys_fsync(int fd) {
     return 0;
 }
 
-int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set,fd_set *except_set, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
-    return ENOSYS; 
-}
-
 int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
     return 0;
 }
