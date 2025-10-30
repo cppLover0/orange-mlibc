@@ -580,11 +580,12 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 	int num;
 	int err;
 
-    if(timeout)
+    if(timeout) {
         err = sys_poll(fds, actual_count, (timeout->tv_sec * 1000) + (timeout->tv_nsec / (1000 * 1000)), &num);
-    else
+    } else {
         err = sys_poll(fds, actual_count, -1, &num);
-
+    }
+    
 	if(err) {
 		free(fds);
 		return err;
