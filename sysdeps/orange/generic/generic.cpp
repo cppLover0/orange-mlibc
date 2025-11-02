@@ -608,8 +608,6 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 			events &= ~POLLOUT;
 		}
 
-        FD_CLR(fds[fd].fd, except_set);
-
 		if(events)
 			return_count++;
 	}
