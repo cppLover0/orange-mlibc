@@ -558,6 +558,7 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 	for(int fd = 0; fd < num_fds; ++fd) {
 		short events = 0;
 		if(read_set && FD_ISSET(fd, read_set)) {
+            mlibc::infoLogger() << "Setting read bit for fd " << fd << frg::endlog;
 			events |= POLLIN;
 		}
 
