@@ -566,9 +566,8 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 		}
 
 		if(except_set && FD_ISSET(fd, except_set)) {
-			events |= POLLPRI;
+			events |= POLLIN;
 		}
-
 
 		if(events) {
 			fds[actual_count].fd = fd;
@@ -607,11 +606,6 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 		if((events & POLLOUT) && (fds[fd].revents & WRITE_SET_POLLSTUFF) == 0) {
 			FD_CLR(fds[fd].fd, write_set);
 			events &= ~POLLOUT;
-		}
-
-        if((events & POLLPRI) && (fds[fd].revents & EXCEPT_SET_POLLSTUFF) == 0) {
-				FD_CLR(fds[fd].fd, except_set);
-				events &= ~POLLPRI;
 		}
 
 		if(events)
