@@ -342,14 +342,6 @@ int sys_fsync(int fd) {
     return 0;
 }
 
-int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
-    return 0;
-}
-
-int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
-    return 0;
-}
-
 int sys_uname(struct utsname *buf) {
     memcpy(buf->sysname, "Orange",6);
 	memcpy(buf->nodename, "orange-pc",6);
