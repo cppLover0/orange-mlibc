@@ -550,7 +550,6 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 	for(int fd = 0; fd < num_fds; ++fd) {
 		short events = 0;
 		if(read_set && FD_ISSET(fd, read_set)) {
-            mlibc::infoLogger() << "Setting read bit for fd " << fd << frg::endlog;
 			events |= POLLIN;
 		}
 
@@ -592,7 +591,6 @@ int sys_pselect(int num_fds, fd_set *read_set, fd_set *write_set, fd_set *except
 	for(int fd = 0; fd < actual_count; ++fd) {
 		int events = fds[fd].events;
 		if((events & POLLIN) && (fds[fd].revents & READ_SET_POLLSTUFF) == 0) {
-            mlibc::infoLogger() << "Clearing read bit for pselect for fd " << fds[fd].fd << frg::endlog;
 			FD_CLR(fds[fd].fd, read_set);
 			events &= ~POLLIN;
 		}
@@ -620,6 +618,14 @@ int sys_ttyname(int fd, char *buf, size_t size) {
     int ret;
     asm volatile("syscall" : "=a"(ret) : "a"(56), "D"(fd), "S"(buf), "d"(size) : "rcx","r11");
     return ret;
+}
+
+int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
+    return 0;
+}
+
+int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
+    return 0;
 }
 
 }
