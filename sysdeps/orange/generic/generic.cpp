@@ -632,4 +632,18 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
     return ENOSYS;
 }
 
+int sys_setpriority(int which, id_t who, int prio) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(59), "D"(which), "S"(who), "d"(prio) : "rcx", "r11");
+    return ret;
+}
+
+int sys_getpriority(int which, id_t who, int *value) {
+    int ret;
+    int val;
+    asm volatile("syscall" : "=a"(ret), "=d"(val) : "a"(60), "D"(which), "S"(who) : "rcx", "r11");
+    *value = val;
+    return ret;
+}
+
 }
