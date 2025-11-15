@@ -646,4 +646,9 @@ int sys_getpriority(int which, id_t who, int *value) {
     return ret;
 }
 
+void sys_yield() {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(61) : "rcx", "r11");
+}
+
 }
