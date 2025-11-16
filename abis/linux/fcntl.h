@@ -103,6 +103,7 @@ struct f_owner_ex {
 #endif /* _GNU_SOURCE */
 
 #define F_OWNER_TID 0
+#define F_OWNER_PID 1
 
 #define POSIX_FADV_NORMAL 0
 #define POSIX_FADV_RANDOM 1
