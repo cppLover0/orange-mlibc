@@ -19,26 +19,15 @@
 #define O_NONBLOCK     04000
 #define O_DSYNC       010000
 #define O_ASYNC       020000
+#define O_DIRECT      040000
+#define O_DIRECTORY  0200000
+#define O_NOFOLLOW   0400000
 #define O_CLOEXEC   02000000
 #define O_SYNC      04010000
 #define O_RSYNC     04010000
-#define O_NOATIME   01000000
-
-#if defined(__x86_64__) || defined(__i386__) || defined(__riscv) || defined(__loongarch64)
-#define O_DIRECT      040000
 #define O_LARGEFILE  0100000
-#define O_DIRECTORY  0200000
-#define O_NOFOLLOW   0400000
-#elif defined(__aarch64__) || defined(__m68k__)
-#define O_DIRECTORY   040000
-#define O_NOFOLLOW   0100000
-#define O_DIRECT     0200000
-#define O_LARGEFILE  0400000
-#else
-#warning "Missing <fcntl.h> support for this architecture!"
-#endif
-
-#define O_TMPFILE (020000000 | O_DIRECTORY)
+#define O_NOATIME   01000000
+#define O_TMPFILE  020000000
 
 #define O_EXEC O_PATH
 #define O_SEARCH O_PATH
@@ -54,23 +43,11 @@
 #define F_SETSIG 10
 #define F_GETSIG 11
 
-#if __INTPTR_WIDTH__ == 64
-
-#define F_GETLK64 5
-#define F_SETLK64 6
-#define F_SETLKW64 7
-
-#else /* __INTPTR_WIDTH__ == 64 */
-
-#define F_GETLK64 12
-#define F_SETLK64 13
-#define F_SETLKW64 14
-
-#endif
-
-#define F_GETLK F_GETLK64
-#define F_SETLK F_SETLK64
-#define F_SETLKW F_SETLKW64
+#define F_GETLK 5
+#define F_SETLK 6
+#define F_SETLK64 F_SETLK
+#define F_SETLKW 7
+#define F_SETLKW64 F_SETLKW
 
 #define F_SETOWN_EX 15
 #define F_GETOWN_EX 16
@@ -106,39 +83,26 @@
 #define AT_REMOVEDIR 0x200
 #define AT_SYMLINK_FOLLOW 0x400
 #define AT_EACCESS 0x200
-
-#if defined(_GNU_SOURCE)
 #define AT_NO_AUTOMOUNT 0x800
 #define AT_EMPTY_PATH 0x1000
-#endif
 
-#if __MLIBC_LINUX_OPTION && defined(_GNU_SOURCE)
-
-#define DN_ACCESS 1
-#define DN_MODIFY 2
-#define DN_CREATE 4
-#define DN_DELETE 8
-#define DN_RENAME 16
-#define DN_ATTRIB 32
-#define DN_MULTISHOT 0x80000000
+#if __MLIBC_LINUX_OPTION
 
 #define AT_STATX_SYNC_AS_STAT 0x0000
 #define AT_STATX_FORCE_SYNC 0x2000
 #define AT_STATX_DONT_SYNC 0x4000
 #define AT_STATX_SYNC_TYPE 0x6000
 
-#endif /* __MLIBC_LINUX_OPTION && defined(_GNU_SOURCE) */
+#endif /* __MLIBC_LINUX_OPTION */
 
-#if defined(_GNU_SOURCE) || __MLIBC_POSIX2024
+#if defined(_GNU_SOURCE)
 struct f_owner_ex {
 	int type;
 	pid_t pid;
 };
-#endif /* defined(_GNU_SOURCE) || __MLIBC_POSIX2024 */
+#endif /* _GNU_SOURCE */
 
 #define F_OWNER_TID 0
-#define F_OWNER_PID 1
-#define F_OWNER_PGRP 2
 
 #define POSIX_FADV_NORMAL 0
 #define POSIX_FADV_RANDOM 1

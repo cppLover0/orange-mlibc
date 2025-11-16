@@ -62,13 +62,13 @@ int siginterrupt(int sig, int flag) {
 	int ret;
 	struct sigaction act;
 
-	sigaction(sig, nullptr, &act);
+	sigaction(sig, NULL, &act);
 	if (flag)
 		act.sa_flags &= ~SA_RESTART;
 	else
 		act.sa_flags |= SA_RESTART;
 
-	ret = sigaction(sig, &act, nullptr);
+	ret = sigaction(sig, &act, NULL);
 	return ret;
 }
 

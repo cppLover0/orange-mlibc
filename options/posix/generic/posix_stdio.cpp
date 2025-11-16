@@ -9,7 +9,6 @@
 #include <fcntl.h>
 
 #include <bits/ensure.h>
-#include <mlibc-config.h>
 #include <mlibc/ansi-sysdeps.hpp>
 #include <mlibc/debug.hpp>
 #include <mlibc/file-io.hpp>
@@ -50,7 +49,7 @@ int pclose(FILE *stream) {
 
 	fclose(file);
 
-	if (mlibc::sys_waitpid(pid, &status, 0, nullptr, &pid) != 0) {
+	if (mlibc::sys_waitpid(pid, &status, 0, NULL, &pid) != 0) {
 	    errno = ECHILD;
 	    return -1;
 	}
@@ -66,14 +65,14 @@ FILE *popen(const char *command, const char *typestr) {
 	MLIBC_CHECK_OR_ENOSYS(mlibc::sys_fork && mlibc::sys_dup2 && mlibc::sys_execve &&
 			mlibc::sys_sigprocmask && mlibc::sys_sigaction && mlibc::sys_pipe, nullptr);
 
-	if (typestr == nullptr) {
+	if (typestr == NULL) {
 		errno = EINVAL;
 		return nullptr;
 	}
 
-	if (strstr(typestr, "w") != nullptr) {
+	if (strstr(typestr, "w") != NULL) {
 		is_write = true;
-	} else if (strstr(typestr, "r") != nullptr) {
+	} else if (strstr(typestr, "r") != NULL) {
 		is_write = false;
 	} else {
 		errno = EINVAL;
@@ -81,7 +80,7 @@ FILE *popen(const char *command, const char *typestr) {
 	}
 
 	bool cloexec = false;
-	if (strstr(typestr, "e") != nullptr) {
+	if (strstr(typestr, "e") != NULL) {
 		// Set FD_CLOEXEC on the new file descriptor
 		cloexec = true;
 	}
@@ -172,9 +171,7 @@ int fseeko(FILE *file_base, off_t offset, int whence) {
 	return 0;
 }
 
-#if __MLIBC_LINUX_OPTION
 [[gnu::alias("fseeko")]] int fseeko64(FILE *file_base, off64_t offset, int whence);
-#endif /* !__MLIBC_LINUX_OPTION */
 
 off_t ftello(FILE *file_base) {
 	auto file = static_cast<mlibc::abstract_file *>(file_base);
@@ -186,9 +183,7 @@ off_t ftello(FILE *file_base) {
 	return current_offset;
 }
 
-#if __MLIBC_LINUX_OPTION
 [[gnu::alias("ftello")]] off64_t ftello64(FILE *file_base);
-#endif /* !__MLIBC_LINUX_OPTION */
 
 int dprintf(int fd, const char *format, ...) {
 	va_list args;

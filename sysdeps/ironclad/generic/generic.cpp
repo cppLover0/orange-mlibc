@@ -83,47 +83,30 @@ int sys_open(const char *path, int flags, mode_t mode, int *fd) {
 int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
 	int ret, errno;
 
-	// Check clashing sysdep-implemented files here before we do anything else.
-	if ((flags & O_CREAT) && ((flags & O_WRONLY) == 0)) {
-		return EISDIR;
-	}
-
-	// Attempt to open.
-	int path_len = strlen(path);
+	int path_len = strlen (path);
 	SYSCALL4(SYSCALL_OPEN, dirfd, path, path_len, flags);
-
-	// Have to check for O_CREAT since there is a pesky Linux-specific O_EXCL
-	// extension that makes it not fail if we are opening a block device.
-	// Otherwise O_EXCL with the file existing should be always a failure.
-	if (ret != -1 && (flags & O_EXCL) && (flags & O_CREAT)) {
+	if (ret != -1 && (flags & O_EXCL)) {
 		SYSCALL1(SYSCALL_CLOSE, ret);
 		return EEXIST;
 	}
 
-	if ((errno == ENOENT) && (flags & O_CREAT) && ((flags & O_DIRECTORY) == 0)) {
-		SYSCALL5(SYSCALL_MAKENODE, AT_FDCWD, path, path_len, S_IFREG | mode, 0);
+	if (ret == -1 && (flags & O_CREAT)) {
+		SYSCALL5(SYSCALL_MAKENODE, AT_FDCWD, path, path_len, mode, 0);
 		if (ret == -1) {
 			return errno;
 		}
 		SYSCALL4(SYSCALL_OPEN, AT_FDCWD, path, path_len, flags);
-	}
-
-	// Handle some post-opening triggers.
-	if (ret != -1) {
-		if (flags & O_TRUNC) {
-			// If the file cannot be truncated, dont sweat it, some software
-			// depends on some things being truncate-able that ironclad does
-			// not allow. For example, some devices.
-			sys_ftruncate(ret, 0);
-		}
-		if (flags & O_DIRECTORY) {
-			struct stat st;
-			sys_stat(fsfd_target::fd, ret, NULL, 0, &st);
-			if (!S_ISDIR (st.st_mode)) {
-				SYSCALL1(SYSCALL_CLOSE, ret);
-				ret	= -1;
-				errno = ENOTDIR;
-			}
+	} else if (ret != -1 && (flags & O_TRUNC)) {
+		// If the file cannot be truncated, dont sweat it, some software
+		// depends on some things being truncate-able that ironclad does not
+		// allow. For example, some devices.
+		sys_ftruncate(ret, 0);
+	} else if (ret != -1 && (flags & O_DIRECTORY)) {
+		struct stat st;
+		sys_stat(fsfd_target::fd, ret, NULL, 0, &st);
+		if (!S_ISDIR (st.st_mode)) {
+			ret	= -1;
+			errno = ENOTDIR;
 		}
 	}
 
@@ -367,13 +350,6 @@ pid_t sys_getpid() {
 	return ret;
 }
 
-pid_t sys_gettid() {
-	pid_t ret;
-	int errno;
-	SYSCALL0(SYSCALL_GETTID);
-	return ret;
-}
-
 pid_t sys_getppid() {
 	pid_t ret;
 	int errno;
@@ -417,6 +393,12 @@ int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restric
 int sys_sigaltstack(const stack_t *ss, stack_t *oss) {
 	int ret, errno;
 	SYSCALL2(SYSCALL_SIGALTSTACK, ss, oss);
+	return errno;
+}
+
+int sys_sigsuspend(const sigset_t *set) {
+	int ret, errno;
+	SYSCALL1(SYSCALL_SIGSUSPEND, set);
 	return errno;
 }
 
@@ -539,10 +521,6 @@ int sys_ttyname(int fd, char *buff, size_t size) {
 	return errno;
 }
 
-int sys_ptsname(int fd, char *buff, size_t size) {
-	return sys_ttyname(fd, buff, size);
-}
-
 int sys_sethostname(const char *buff, size_t size) {
 	int ret, errno;
 
@@ -594,27 +572,13 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 		return errno;
 	}
 
-	if (result != NULL) {
-		*result = ret;
-	}
+	*result = ret;
 	return 0;
 }
 
 void sys_yield(void) {
 	int ret, errno;
 	SYSCALL0(SYSCALL_SCHED_YIELD);
-}
-
-int sys_getparam(pid_t pid, struct sched_param *param) {
-	int ret, errno;
-	SYSCALL2(SYSCALL_GET_SCHEDULER, pid, param);
-	return errno;
-}
-
-int sys_setparam(pid_t pid, const struct sched_param *param) {
-	int ret, errno;
-	SYSCALL2(SYSCALL_SET_SCHEDULER, pid, param);
-	return errno;
 }
 
 int sys_kill(int pid, int sig) {
@@ -625,46 +589,40 @@ int sys_kill(int pid, int sig) {
 
 int sys_dup(int fd, int flags, int *newfd) {
 	int ret, errno;
-	SYSCALL3(SYSCALL_FCNTL, fd, F_DUPFD, 0);
-
-	if (errno == 0 && flags != 0) {
-		int fcntl_flags = 0;
-		if (flags & O_CLOEXEC) {
-			fcntl_flags |= FD_CLOEXEC;
-		}
-		if (flags & O_CLOFORK) {
-			fcntl_flags |= FD_CLOFORK;
-		}
-		SYSCALL3(SYSCALL_FCNTL, ret, F_SETFD, fcntl_flags);
+	if (flags & O_CLOEXEC) {
+		SYSCALL3(SYSCALL_FCNTL, fd, F_DUPFD_CLOEXEC, 0);
+	} else {
+		SYSCALL3(SYSCALL_FCNTL, fd, F_DUPFD, 0);
 	}
 
 	*newfd = ret;
+
+	if (errno == 0) {
+		SYSCALL3(SYSCALL_FCNTL, *newfd, F_SETFD, flags);
+	}
+
 	return errno;
 }
 
 int sys_dup2(int fd, int flags, int newfd) {
-	// We are to do nothing if they are equal.
-	if (fd == newfd) {
-		return 0;
-	}
-
 	int ret = sys_close(newfd);
-	if (ret != 0 && ret != EBADF) {
-		return EBADF;
+	if (ret != 0 && ret != EBADFD) {
+		return EBADFD;
 	}
 
 	int errno;
-	SYSCALL3(SYSCALL_FCNTL, fd, F_DUPFD, newfd);
+	if (flags & O_CLOEXEC) {
+		SYSCALL3(SYSCALL_FCNTL, fd, F_DUPFD_CLOEXEC, newfd);
+	} else {
+		SYSCALL3(SYSCALL_FCNTL, fd, F_DUPFD, newfd);
+	}
 
-	if (errno == 0 && flags != 0) {
-		int fcntl_flags = 0;
-		if (flags & O_CLOEXEC) {
-			fcntl_flags |= FD_CLOEXEC;
-		}
-		if (flags & O_CLOFORK) {
-			fcntl_flags |= FD_CLOFORK;
-		}
-		SYSCALL3(SYSCALL_FCNTL, ret, F_SETFD, fcntl_flags);
+	if (ret != -1 && ret != newfd) {
+		return EBADFD;
+	}
+
+	if (errno == 0) {
+		SYSCALL3(SYSCALL_FCNTL, newfd, F_SETFD, flags);
 	}
 
 	return errno;
@@ -775,7 +733,10 @@ int sys_mkdir(const char *path, mode_t mode) {
 }
 
 int sys_mkdirat(int dirfd, const char *path, mode_t mode) {
-	return sys_mknodat(dirfd, path, S_IFDIR | mode, 0);
+	int ret, errno;
+	size_t path_len = strlen (path);
+	SYSCALL5(SYSCALL_MAKENODE, dirfd, path, path_len, S_IFDIR | mode, 0);
+	return errno;
 }
 
 int sys_rmdir(const char* path){
@@ -1038,20 +999,23 @@ int sys_shutdown(int sockfd, int how) {
 
 int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value) {
 	(void)which; (void)new_value; (void)old_value;
-	return 0;
+	return ENOSYS;
 }
 
 int sys_msg_recv(int fd, struct msghdr *hdr, int flags, ssize_t *length) {
-	int ret, errno;
+	(void)flags;
 
 	if (hdr->msg_control != NULL) {
-		SYSCALL3(SYSCALL_RECVSOCKCTL, fd, hdr->msg_control, hdr->msg_controllen);
+		// mlibc::infoLogger() << "mlibc: recv() msg_control not supported!" << frg::endlog;
 	}
 
+	int ret;
 	size_t count = 0;
+	int errno;
+
 	for (int i = 0; i < hdr->msg_iovlen; i++) {
-		SYSCALL6(SYSCALL_RECVFROM, fd, hdr->msg_iov[i].iov_base, hdr->msg_iov[i].iov_len,
-					flags, hdr->msg_name, hdr->msg_namelen);
+		SYSCALL6(SYSCALL_RECVFROM, fd, hdr->msg_iov->iov_base, hdr->msg_iov->iov_len,
+					hdr->msg_flags, hdr->msg_name, hdr->msg_namelen);
 		if (ret == -1) {
 			return errno;
 		}
@@ -1063,16 +1027,19 @@ int sys_msg_recv(int fd, struct msghdr *hdr, int flags, ssize_t *length) {
 }
 
 int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
-	int ret, errno;
+	(void)flags;
 
 	if (hdr->msg_control != NULL) {
-		SYSCALL3(SYSCALL_SENDSOCKCTL, fd, hdr->msg_control, hdr->msg_controllen);
+		// mlibc::infoLogger() << "mlibc: recv() msg_control not supported!" << frg::endlog;
 	}
 
+	int ret;
 	size_t count = 0;
+	int errno;
+
 	for (int i = 0; i < hdr->msg_iovlen; i++) {
-		SYSCALL6(SYSCALL_SENDTO, fd, hdr->msg_iov[i].iov_base, hdr->msg_iov[i].iov_len,
-					flags, hdr->msg_name, hdr->msg_namelen);
+		SYSCALL6(SYSCALL_SENDTO, fd, hdr->msg_iov->iov_base, hdr->msg_iov->iov_len,
+					hdr->msg_flags, hdr->msg_name, hdr->msg_namelen);
 		if (ret == -1) {
 			return errno;
 		}
@@ -1086,7 +1053,12 @@ int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
 
 int sys_ppoll(struct pollfd *fds, int nfds, const struct timespec *timeout, const sigset_t *sigmask, int *num_events) {
 	int ret, errno;
-	SYSCALL4(SYSCALL_PPOLL, fds, nfds, timeout, sigmask);
+	if (timeout == NULL) {
+		struct timespec t = {.tv_sec = (time_t)-1, .tv_nsec = (time_t)-1};
+		SYSCALL4(SYSCALL_PPOLL, fds, nfds, &t, sigmask);
+	} else {
+		SYSCALL4(SYSCALL_PPOLL, fds, nfds, timeout, sigmask);
+	}
 	if (ret == -1) {
 		return errno;
 	}
@@ -1100,19 +1072,6 @@ int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
 	ts.tv_sec = timeout / 1000;
 	ts.tv_nsec = (timeout % 1000) * 1000000;
 	return sys_ppoll(fds, count, timeout == -1 ? NULL : &ts, NULL, num_events);
-}
-
-int sys_pause(void) {
-	return sys_ppoll(NULL, 0, NULL, NULL, NULL);
-}
-
-int sys_sigsuspend(const sigset_t *set) {
-	return sys_ppoll(NULL, 0, NULL, set, NULL);
-}
-
-int sys_sigpending(sigset_t *set) {
-	*set = 0;
-	return 0;
 }
 
 int sys_pselect(int nfds, fd_set *read_set, fd_set *write_set,
@@ -1255,7 +1214,6 @@ int sys_sysconf(int num, long *rret) {
 	struct meminfo mem;
 	struct cpuinfo cpu;
 	int ret, errno;
-	long secs, nanos;
 
 	switch (num) {
 		case _SC_LINE_MAX:
@@ -1281,7 +1239,7 @@ int sys_sysconf(int num, long *rret) {
 				return EFAULT;
 			}
 		case _SC_OPEN_MAX:
-			*rret = 1024;
+			*rret = 100;
 			return 0;
 		case _SC_AVPHYS_PAGES:
 			SYSCALL1(SYSCALL_MEMINFO, &mem);
@@ -1310,14 +1268,6 @@ int sys_sysconf(int num, long *rret) {
 		case _SC_THREAD_STACK_MIN:
 			*rret = 0x1000;
 			return 0;
-		case _SC_CLK_TCK:
-			ret = sys_clock_getres(CLOCK_MONOTONIC, &secs, &nanos);
-			if (ret == 0) {
-				*rret = 1000000000 / nanos;
-				return 0;
-			} else {
-				return ret;
-			}
 		default:
 			return EINVAL;
 	}
@@ -1436,65 +1386,11 @@ int sys_renameat(int olddirfd, const char *old_path, int newdirfd, const char *n
 	return errno;
 }
 
-int sys_mknodat(int dirfd, const char *path, int mode, int dev) {
+int sys_mknodat(int dirfd, const char *path, mode_t mode, dev_t dev) {
 	int ret;
 	int errno;
 	size_t len = strlen(path);
 	SYSCALL5(SYSCALL_MAKENODE, dirfd, path, len, mode, dev);
-	return errno;
-}
-
-int sys_mkfifoat(int dirfd, const char *path, mode_t mode) {
-	return sys_mknodat(dirfd, path, S_IFIFO | mode, 0);
-}
-
-int sys_openpt(int oflags, int *fd) {
-	int sfd, e;
-
-	if (e = sys_openpty(fd, &sfd, NULL, NULL, NULL); e) {
-		return e;
-	}
-	sys_close(sfd);
-
-	int fdflags = 0;
-	if (oflags & O_CLOEXEC) {
-		fdflags |= FD_CLOEXEC;
-	}
-	if (oflags & O_CLOFORK) {
-		fdflags |= FD_CLOFORK;
-	}
-	if (fdflags) {
-		fcntl(*fd, F_SETFD, fdflags);
-	}
-
-	// We ignore non O_RDWR passed in oflags since that doesnt bond well with
-	// the openpty interface.
-	if (!(oflags & O_NOCTTY)) {
-		ioctl(*fd, TIOCSCTTY);
-	}
-	if (oflags & O_NONBLOCK) {
-		fdflags = fcntl(*fd, F_GETFL);
-		fcntl(*fd, F_SETFL, fdflags | O_NONBLOCK);
-	}
-
-	return e;
-}
-
-int sys_unlockpt(int fd) {
-	int unlock = 0;
-	return sys_ioctl(fd, TIOCSPTLCK, &unlock, NULL);
-}
-
-int sys_symlink(const char *target, const char *link_path) {
-	return sys_symlinkat(target, AT_FDCWD, link_path);
-}
-
-int sys_symlinkat(const char *target_path, int dirfd, const char *link_path) {
-	int ret;
-	int errno;
-	size_t target_len = strlen(target_path);
-	size_t link_len = strlen(link_path);
-	SYSCALL5(SYSCALL_SYMLINK, dirfd, target_path, target_len, link_path, link_len);
 	return errno;
 }
 

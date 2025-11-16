@@ -6,7 +6,6 @@
 #include <sys/mman.h>
 #include <bits/ensure.h>
 
-#include <mlibc-config.h>
 #include <mlibc/debug.hpp>
 #include <mlibc/posix-sysdeps.hpp>
 
@@ -82,9 +81,7 @@ void *mmap(void *hint, size_t size, int prot, int flags, int fd, off_t offset) {
 	return window;
 }
 
-#if __MLIBC_LINUX_OPTION
 [[gnu::alias("mmap")]] void *mmap64(void *hint, size_t size, int prot, int flags, int fd, off64_t offset);
-#endif /* !__MLIBC_LINUX_OPTION */
 
 int munmap(void *pointer, size_t size) {
 	if(int e = mlibc::sys_vm_unmap(pointer, size); e) {
@@ -103,17 +100,17 @@ namespace {
 		if(*(p = strchrnul(name, '/')) || p == name ||
 			(p - name <= 2 && name[0] == '.' && p[-1] == '.')) {
 			errno = EINVAL;
-			return nullptr;
+			return 0;
 		}
 		if(p - name > NAME_MAX) {
 			errno = ENAMETOOLONG;
-			return nullptr;
+			return 0;
 		}
 		memcpy(buf, "/dev/shm/", 9);
 		memcpy(buf + 9, name, p - name + 1);
 		return buf;
 	}
-} // namespace
+}
 
 int shm_open(const char *name, int flags, mode_t mode) {
 	int cs;
@@ -122,7 +119,7 @@ int shm_open(const char *name, int flags, mode_t mode) {
 		return -1;
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 	int fd = open(name, flags | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK, mode);
-	pthread_setcancelstate(cs, nullptr);
+	pthread_setcancelstate(cs, 0);
 	return fd;
 }
 

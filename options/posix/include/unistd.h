@@ -22,11 +22,10 @@
 extern "C" {
 #endif
 
-#define _POSIX_VERSION 202405L
+#define _POSIX_VERSION 200809L
 #define _POSIX2_VERSION _POSIX_VERSION
-#define _XOPEN_VERSION 800
+#define _XOPEN_VERSION 700
 
-#define _POSIX_ADVISORY_INFO _POSIX_VERSION
 #define _POSIX_FSYNC _POSIX_VERSION
 #define _POSIX_IPV6 _POSIX_VERSION
 #define _POSIX_JOB_CONTROL 1
@@ -265,13 +264,10 @@ unsigned int alarm(unsigned int __seconds);
 int chdir(const char *__path);
 int chown(const char *__path, uid_t __uid, gid_t __gid);
 int close(int __fd);
-size_t confstr(int __name, char *__buf, size_t __size);
+ssize_t confstr(int __name, char *__buf, size_t __size);
 char *ctermid(char *__s);
 int dup(int __fd);
 int dup2(int __src_fd, int __dest_fd);
-#if __MLIBC_POSIX2024 || defined(_GNU_SOURCE)
-int dup3(int __fd, int __newfd, int __flags);
-#endif
 __attribute__((__noreturn__)) void _exit(int __status);
 void endusershell(void);
 int execl(const char *__path, const char *__arg, ...);
@@ -292,9 +288,7 @@ pid_t vfork(void);
 long fpathconf(int __fd, int __name);
 int fsync(int __fd);
 int ftruncate(int __fd, off_t __size);
-#if __MLIBC_LINUX_OPTION
 int ftruncate64(int __fd, off64_t __size);
-#endif /* !__MLIBC_LINUX_OPTION */
 char *getcwd(char *__buffer, size_t __size);
 gid_t getegid(void);
 uid_t geteuid(void);
@@ -320,21 +314,15 @@ int link(const char *__oldpath, const char *__newpath);
 int linkat(int __olddirfd, const char *__oldpath, int __newdirfd, const char *__newpath, int __flags);
 int lockf(int __fd, int __op, off_t __size);
 off_t lseek(int __fd, off_t __offset, int __whence);
-#if __MLIBC_LINUX_OPTION
 off64_t lseek64(int __fd, off64_t __offset, int __whence);
-#endif /* !__MLIBC_LINUX_OPTION */
 int nice(int __increment);
 long pathconf(const char *__path, int __name);
 int pause(void);
 int pipe(int __pipefd[2]);
 ssize_t pread(int __fd, void *__buf, size_t __size, off_t __offset);
-#if __MLIBC_LINUX_OPTION
 ssize_t pread64(int __fd, void *__buf, size_t __size, off_t __offset);
-#endif /* !__MLIBC_LINUX_OPTION */
 ssize_t pwrite(int __fd, const void *__buf, size_t __size, off_t __offset);
-#if __MLIBC_LINUX_OPTION
 ssize_t pwrite64(int __fd, const void *__buf, size_t __size, off_t __offset);
-#endif /* !__MLIBC_LINUX_OPTION */
 ssize_t read(int fd, void *buffer, size_t size);
 ssize_t readlink(const char *__restrict __path, char *__restrict __buf, size_t __size);
 ssize_t readlinkat(int __dirfd, const char *__restrict __path, char *__restrict __buf, size_t __size);
@@ -358,9 +346,7 @@ long sysconf(int __name);
 pid_t tcgetpgrp(int __fd);
 int tcsetpgrp(int __fd, pid_t __pgrp);
 int truncate(const char *__path, off_t __size);
-#if __MLIBC_LINUX_OPTION
 int truncate64(const char *__path, off64_t __size);
-#endif /* !__MLIBC_LINUX_OPTION */
 char *ttyname(int __fd);
 int ttyname_r(int __fd, char *__buf, size_t __size);
 int unlink(const char *__path);
@@ -376,7 +362,11 @@ extern int optopt;
 #endif /* !__MLIBC_ABI_ONLY */
 
 /* Non-POSIX functions supported by Linux. */
+#if UINTPTR_MAX == UINT64_MAX
+typedef __mlibc_uint64 useconds_t;
+#else
 typedef __mlibc_uint32 useconds_t;
+#endif
 
 #ifndef __MLIBC_ABI_ONLY
 

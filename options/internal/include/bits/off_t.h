@@ -1,9 +1,8 @@
-#ifndef _MLIBC_INTERNAL_OFF_T_H
-#define _MLIBC_INTERNAL_OFF_T_H
+#ifndef MLIBC_OFF_T_H
+#define MLIBC_OFF_T_H
 
-#include <bits/types.h>
+/* TODO: use something like int64_t instead? */
+typedef long off_t;
+typedef long off64_t;
 
-typedef __mlibc_int64 off_t;
-typedef __mlibc_int64 off64_t;
-
-#endif /* _MLIBC_INTERNAL_OFF_T_H */
+#endif /* MLIBC_OFF_T_H */

@@ -93,11 +93,6 @@ typedef struct {
 #define SA_RESETHAND 0x80000000
 #define SA_RESTORER 0x04000000
 
-/* SA_NOMASK is an alias for SA_NODEFER */
-/* SA_ONESHOT is an alias for SA_RESETHAND */
-#define SA_NOMASK SA_NODEFER
-#define SA_ONESHOT SA_RESETHAND
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -206,25 +201,28 @@ typedef struct __stack {
 #define SI_USER 0
 #define SI_KERNEL 128
 
-#include <bits/threads.h>
-
-struct sigaction {
-	union {
-		void (*sa_handler)(int);
-		void (*sa_sigaction)(int, siginfo_t *, void *);
-	} __sa_handler;
-	unsigned long sa_flags;
-	void (*sa_restorer)(void);
-	sigset_t sa_mask;
-};
-
-#define sa_handler __sa_handler.sa_handler
-#define sa_sigaction __sa_handler.sa_sigaction
-
-/* Taken from the linux kernel headers */
-
-#if defined(__x86_64__)
-
+#if defined(__i386__)
+#define REG_GS 0
+#define REG_FS 1
+#define REG_ES 2
+#define REG_DS 3
+#define REG_EDI 4
+#define REG_ESI 5
+#define REG_EBP 6
+#define REG_ESP 7
+#define REG_EBX 8
+#define REG_EDX 9
+#define REG_ECX 10
+#define REG_EAX 11
+#define REG_TRAPNO 12
+#define REG_ERR 13
+#define REG_EIP 14
+#define REG_CS 15
+#define REG_EFL 16
+#define REG_UESP 17
+#define REG_SS 18
+#define NGREG 19
+#elif defined(__x86_64__)
 #define REG_R8 0
 #define REG_R9 1
 #define REG_R10 2
@@ -249,78 +247,26 @@ struct sigaction {
 #define REG_OLDMASK 21
 #define REG_CR2 22
 #define NGREG 23
+#endif
 
-struct _fpxreg {
-	unsigned short significand[4];
-	unsigned short exponent;
-	unsigned short padding[3];
+#include <bits/threads.h>
+
+struct sigaction {
+	union {
+		void (*sa_handler)(int);
+		void (*sa_sigaction)(int, siginfo_t *, void *);
+	} __sa_handler;
+	unsigned long sa_flags;
+	void (*sa_restorer)(void);
+	sigset_t sa_mask;
 };
 
-struct _xmmreg {
-	uint32_t element[4];
-};
+#define sa_handler __sa_handler.sa_handler
+#define sa_sigaction __sa_handler.sa_sigaction
 
-struct _fpstate {
-	uint16_t cwd;
-	uint16_t swd;
-	uint16_t ftw;
-	uint16_t fop;
-	uint64_t rip;
-	uint64_t rdp;
-	uint32_t mxcsr;
-	uint32_t mxcr_mask;
-	struct _fpxreg _st[8];
-	struct _xmmreg _xmm[16];
-	uint32_t padding[24];
-};
+/* Taken from the linux kernel headers */
 
-struct sigcontext {
-	unsigned long r8, r9, r10, r11, r12, r13, r14, r15;
-	unsigned long rdi, rsi, rbp, rbx, rdx, rax, rcx, rsp, rip, eflags;
-	unsigned short cs, gs, fs, ss;
-	unsigned long err, trapno, oldmask, cr2;
-	struct _fpstate *fpstate;
-	unsigned long __reserved1[8];
-};
-
-typedef struct {
-	unsigned long gregs[NGREG];
-	struct _fpstate *fpregs;
-	unsigned long __reserved1[8];
-} mcontext_t;
-
-typedef struct __ucontext {
-	unsigned long uc_flags;
-	struct __ucontext *uc_link;
-	stack_t uc_stack;
-	mcontext_t uc_mcontext;
-	sigset_t uc_sigmask;
-	struct _fpstate __fpregs_mem;
-	unsigned long __ssp[4];
-} ucontext_t;
-
-#elif defined(__i386__)
-
-#define REG_GS 0
-#define REG_FS 1
-#define REG_ES 2
-#define REG_DS 3
-#define REG_EDI 4
-#define REG_ESI 5
-#define REG_EBP 6
-#define REG_ESP 7
-#define REG_EBX 8
-#define REG_EDX 9
-#define REG_ECX 10
-#define REG_EAX 11
-#define REG_TRAPNO 12
-#define REG_ERR 13
-#define REG_EIP 14
-#define REG_CS 15
-#define REG_EFL 16
-#define REG_UESP 17
-#define REG_SS 18
-#define NGREG 19
+#if defined(__x86_64__) || defined(__i386__)
 
 struct _fpreg {
 	unsigned short significand[4];
@@ -338,6 +284,19 @@ struct _xmmreg {
 };
 
 struct _fpstate {
+#if defined(__x86_64__)
+	uint16_t cwd;
+	uint16_t swd;
+	uint16_t ftw;
+	uint16_t fop;
+	uint64_t rip;
+	uint64_t rdp;
+	uint32_t mxcsr;
+	uint32_t mxcr_mask;
+	struct _fpxreg _st[8];
+	struct _xmmreg _xmm[16];
+	uint32_t padding[24];
+#elif defined(__i386__)
 	uint32_t cw;
 	uint32_t sw;
 	uint32_t tag;
@@ -358,9 +317,18 @@ struct _fpstate {
 	struct _xmmreg _xmm[8];
 
 	uint32_t padding2[56];
+#endif
 };
 
 struct sigcontext {
+#if defined(__x86_64__)
+	unsigned long r8, r9, r10, r11, r12, r13, r14, r15;
+	unsigned long rdi, rsi, rbp, rbx, rdx, rax, rcx, rsp, rip, eflags;
+	unsigned short cs, gs, fs, __pad0;
+	unsigned long err, trapno, oldmask, cr2;
+	struct _fpstate *fpstate;
+	unsigned long __reserved1[8];
+#elif defined(__i386__)
 	unsigned short gs, __gsh, fs, __fsh, es, __esh, ds, __dsh;
 	unsigned long edi, esi, ebp, esp, ebx, edx, ecx, eax;
 	unsigned long trapno, err, eip;
@@ -369,26 +337,14 @@ struct sigcontext {
 	unsigned short ss, __ssh;
 	struct _fpstate *fpstate;
 	unsigned long oldmask, cr2;
+#endif
 };
 
 typedef struct {
-	int gregs[NGREG];
+	unsigned long gregs[NGREG];
 	struct _fpstate *fpregs;
-	unsigned long oldmask;
-	unsigned long cr2;
+	unsigned long __reserved1[8];
 } mcontext_t;
-
-struct _libc_fpstate {
-	uint32_t cw;
-	uint32_t sw;
-	uint32_t tag;
-	uint32_t ipoff;
-	uint32_t cssel;
-	uint32_t dataoff;
-	uint32_t datasel;
-	struct _fpreg _st[8];
-	uint32_t status;
-};
 
 typedef struct __ucontext {
 	unsigned long uc_flags;
@@ -396,8 +352,6 @@ typedef struct __ucontext {
 	stack_t uc_stack;
 	mcontext_t uc_mcontext;
 	sigset_t uc_sigmask;
-	struct _libc_fpstate __fpregs_mem;
-	unsigned long __ssp[4];
 } ucontext_t;
 
 #elif defined(__riscv) && __riscv_xlen == 64
@@ -451,7 +405,7 @@ typedef struct sigcontext {
 
 typedef struct __ucontext {
 	unsigned long uc_flags;
-	struct __ucontext *uc_link;
+	struct ucontext	*uc_link;
 	stack_t uc_stack;
 	sigset_t uc_sigmask;
 #pragma GCC diagnostic push
@@ -471,7 +425,7 @@ typedef struct sigcontext {
 	uint64_t sp;
 	uint64_t pc;
 	uint64_t pstate;
-	uint8_t __reserved[4096]  __attribute__ ((__aligned__ (16)));
+	uint8_t __reserved[4096];
 } mcontext_t;
 
 #define FPSIMD_MAGIC 0x46508001
@@ -652,17 +606,14 @@ struct sigcontext {
 	unsigned long sc_pc;
 	unsigned long sc_regs[32];
 	unsigned sc_flags;
-	__extension__ unsigned long sc_extcontext[0] __attribute__((__aligned__(16)));
+	unsigned long sc_extcontext[1] __attribute__((__aligned__(16)));
 };
 
 typedef struct {
 	unsigned long pc;
 	unsigned long gregs[32];
 	unsigned flags;
-/* this is just plain incompatible with pre-C99; hiding this does not change size or alignment */
-#if defined __STDC_VERSION__ && __STDC_VERSION__ >= 199901L
-	__extension__ unsigned long extcontext[0] __attribute__((__aligned__(16)));
-#endif
+	unsigned long extcontext[1] __attribute__((__aligned__(16)));
 } mcontext_t;
 
 struct sigaltstack {
@@ -677,7 +628,7 @@ typedef struct __ucontext {
 	stack_t uc_stack;
 	sigset_t uc_sigmask;
 	long __uc_pad;
-	__extension__ mcontext_t uc_mcontext;
+	mcontext_t uc_mcontext;
 } ucontext_t;
 
 #else

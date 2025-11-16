@@ -1,8 +1,6 @@
 #ifndef _ABIBITS_STATVFS_H
 #define _ABIBITS_STATVFS_H
 
-#include <mlibc-config.h>
-
 #include <abi-bits/fsblkcnt_t.h>
 #include <abi-bits/fsfilcnt_t.h>
 
@@ -31,15 +29,10 @@ struct statvfs {
 	fsfilcnt_t f_ffree;
 	fsfilcnt_t f_favail;
 	unsigned long f_fsid;
-#if __INTPTR_WIDTH__ == 32
-	int __f_unused;
-#endif
 	unsigned long f_flag;
 	unsigned long f_namemax;
-	unsigned int f_spare[6];
 };
 
-#if __MLIBC_LINUX_OPTION && defined(_LARGEFILE64_SOURCE)
 /* WARNING: keep `statvfs` and `statvfs64` in sync or bad things will happen! */
 struct statvfs64 {
 	unsigned long f_bsize;
@@ -51,14 +44,9 @@ struct statvfs64 {
 	fsfilcnt_t f_ffree;
 	fsfilcnt_t f_favail;
 	unsigned long f_fsid;
-#if __INTPTR_WIDTH__ == 32
-	int __f_unused;
-#endif
 	unsigned long f_flag;
 	unsigned long f_namemax;
-	unsigned int f_spare[6];
 };
-#endif /* __MLIBC_LINUX_OPTION && defined(_LARGEFILE64_SOURCE) */
 
 #endif /* _ABIBITS_STATVFS_H */
 

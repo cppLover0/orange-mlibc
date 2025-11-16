@@ -1,5 +1,5 @@
-#ifndef _MLIBC_INTERNAL_INLINE_DEFINITION_H
-#define _MLIBC_INTERNAL_INLINE_DEFINITION_H
+#ifndef MLIBC_INLINE_DEFINITION_H
+#define MLIBC_INLINE_DEFINITION_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,5 +15,5 @@ extern "C" {
 }
 #endif
 
-#endif /* _MLIBC_INTERNAL_INLINE_DEFINITION_H */
+#endif /* MLIBC_INLINE_DEFINITION_H */
 

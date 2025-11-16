@@ -1,6 +1,6 @@
 
-#ifndef _MLIBC_INTERNAL_ENSURE_H
-#define _MLIBC_INTERNAL_ENSURE_H
+#ifndef MLIBC_ENSURE_H
+#define MLIBC_ENSURE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,5 +41,5 @@ void __ensure_warn(const char *assertion, const char *file, unsigned int line,
 }
 #endif
 
-#endif /* _MLIBC_INTERNAL_ENSURE_H */
+#endif /* MLIBC_ENSURE_H */
 

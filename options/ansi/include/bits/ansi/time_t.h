@@ -1,8 +1,8 @@
 
-#ifndef _MLIBC_ANSI_TIME_T
-#define _MLIBC_ANSI_TIME_T
+#ifndef MLIBC_TIME_T
+#define MLIBC_TIME_T
 
 typedef long time_t;
 
-#endif /* _MLIBC_ANSI_TIME_T */
+#endif
 

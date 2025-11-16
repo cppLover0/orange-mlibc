@@ -11,7 +11,7 @@
 
 namespace {
 	char *empty_environment[] = { nullptr };
-} // namespace
+}
 
 char **environ = empty_environment;
 
@@ -111,12 +111,8 @@ namespace mlibc {
 int putenv(char *string) {
 	frg::string_view view{string};
 	size_t s = view.find_first('=');
-	if(s == size_t(-1)) {
-		// GLIBC EXTENSION
-		update_vector();
-		unassign_variable(string);
-		return 0;
-	}
+	if(s == size_t(-1))
+		__ensure(!"Environment strings need to contain an equals sign");
 
 	update_vector();
 	assign_variable(view.sub_string(0, s), string, true);

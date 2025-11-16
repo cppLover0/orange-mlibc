@@ -1,5 +1,5 @@
-#ifndef _MLIBC_POSIX_IOVEC_H
-#define _MLIBC_POSIX_IOVEC_H
+#ifndef MLIBC_IOVEC_H
+#define MLIBC_IOVEC_H
 
 #include <bits/types.h>
 
@@ -8,4 +8,4 @@ struct iovec {
 	__mlibc_size iov_len;
 };
 
-#endif /* _MLIBC_POSIX_IOVEC_H */
+#endif /* MLIBC_IOVEC_H */

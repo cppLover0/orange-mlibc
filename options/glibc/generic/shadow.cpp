@@ -106,7 +106,7 @@ static void cleanup(void *p) {
 
 int getspnam_r(const char *name, struct spwd *sp, char *buf, size_t size, struct spwd **res) {
 	char path[20 + NAME_MAX];
-	FILE *f = nullptr;
+	FILE *f = 0;
 	int rv = 0;
 	int fd;
 	size_t k, l = strlen(name);
@@ -114,7 +114,7 @@ int getspnam_r(const char *name, struct spwd *sp, char *buf, size_t size, struct
 	int cs;
 	int orig_errno = errno;
 
-	*res = nullptr;
+	*res = 0;
 
 	/* Disallow potentially-malicious user names */
 	if(*name=='.' || strchr(name, '/') || !l) {
@@ -138,7 +138,7 @@ int getspnam_r(const char *name, struct spwd *sp, char *buf, size_t size, struct
 		if(fstat(fd, &st) || !S_ISREG(st.st_mode) || !(f = fdopen(fd, "rb"))) {
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 			close(fd);
-			pthread_setcancelstate(cs, nullptr);
+			pthread_setcancelstate(cs, 0);
 			return errno;
 		}
 	} else {
@@ -200,7 +200,7 @@ struct spwd *getspnam(const char *name) {
 		line = (char *)malloc(LINE_LIM);
 	}
 	if(!line) {
-		return nullptr;
+		return 0;
 	}
 	e = getspnam_r(name, &sp, line, LINE_LIM, &res);
 	errno = e ? e : orig_errno;
@@ -210,14 +210,14 @@ struct spwd *getspnam(const char *name) {
 struct spwd *fgetspent(FILE *f) {
 	static struct spwd sp;
 	static char *line;
-	struct spwd *res = nullptr;
+	struct spwd *res = 0;
 	size_t size = 0;
 	int cs;
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 	if(getline(&line, &size, f) >= 0 && __parsespent(line, &sp) >= 0) {
 		res = &sp;
 	}
-	pthread_setcancelstate(cs, nullptr);
+	pthread_setcancelstate(cs, 0);
 	return res;
 }
 

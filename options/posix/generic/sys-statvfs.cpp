@@ -2,7 +2,6 @@
 #include <sys/statvfs.h>
 
 #include <bits/ensure.h>
-#include <mlibc-config.h>
 #include <mlibc/posix-sysdeps.hpp>
 
 int statvfs(const char *path, struct statvfs *out) {
@@ -14,9 +13,7 @@ int statvfs(const char *path, struct statvfs *out) {
 	return 0;
 }
 
-#if __MLIBC_LINUX_OPTION
 [[gnu::alias("statvfs")]] int statvfs64(const char *path, struct statvfs64 *out);
-#endif /* !__MLIBC_LINUX_OPTION */
 
 int fstatvfs(int fd, struct statvfs *out) {
 	MLIBC_CHECK_OR_ENOSYS(mlibc::sys_fstatvfs, -1);
@@ -27,6 +24,5 @@ int fstatvfs(int fd, struct statvfs *out) {
 	return 0;
 }
 
-#if __MLIBC_LINUX_OPTION
 [[gnu::alias("fstatvfs")]] int fstatvfs64(int, struct statvfs64 *);
-#endif /* !__MLIBC_LINUX_OPTION */
+

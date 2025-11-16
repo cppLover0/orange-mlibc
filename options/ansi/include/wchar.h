@@ -8,7 +8,6 @@
 #include <bits/wint_t.h>
 #include <bits/mbstate.h>
 #include <bits/file.h>
-#include <mlibc-config.h>
 
 #define WEOF 0xffffffffU
 
@@ -72,7 +71,7 @@ wchar_t *wcsncat(wchar_t *__restrict __dest, const wchar_t *__restrict __src, si
 int wcscmp(const wchar_t *__a, const wchar_t *__b);
 int wcscoll(const wchar_t *__a, const wchar_t *__b);
 int wcsncmp(const wchar_t *__a, const wchar_t *__b, size_t __size);
-size_t wcsxfrm(wchar_t *__restrict __dest, const wchar_t *__restrict __src, size_t __size);
+int wcsxfrm(wchar_t *__restrict __dest, const wchar_t *__restrict __src, size_t __size);
 int wmemcmp(const wchar_t *__a, const wchar_t *__b, size_t __size);
 
 wchar_t *wcschr(const wchar_t *__s, wchar_t __wc);
@@ -113,17 +112,12 @@ size_t wcsnrtombs(char *__restrict __mbs, const wchar_t **__restrict __wcs, size
 		mbstate_t *__restrict __stp);
 
 /* POSIX extensions */
-#if __MLIBC_XOPEN
 int wcwidth(wchar_t __wc);
 int wcswidth(const wchar_t *__s, size_t __size);
-#endif
-
-#if __MLIBC_POSIX2008
 wchar_t *wcsdup(const wchar_t *__s);
 int wcsncasecmp(const wchar_t *__a, const wchar_t *__b, size_t __size);
 int wcscasecmp(const wchar_t *__a, const wchar_t *__b);
 size_t wcsnlen(const wchar_t *__s, size_t __maxlen);
-#endif /* __MLIBC_POSIX2008 */
 
 #endif /* !__MLIBC_ABI_ONLY */
 
