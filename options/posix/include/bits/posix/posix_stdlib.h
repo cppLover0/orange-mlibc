@@ -1,6 +1,6 @@
 
-#ifndef _MLIBC_POSIX_STDLIB_H
-#define _MLIBC_POSIX_STDLIB_H
+#ifndef MLIBC_POSIX_STDLIB_H
+#define MLIBC_POSIX_STDLIB_H
 
 #include <bits/posix/locale_t.h>
 #include <bits/size_t.h>
@@ -73,5 +73,5 @@ int clearenv(void);
 }
 #endif
 
-#endif /* _MLIBC_POSIX_STDLIB_H */
+#endif /* MLIBC_POSIX_STDLIB_H */
 

@@ -40,7 +40,6 @@ libc_deps += [ bragi_dep, hel_dep, proto_posix_dep, libdrm_dep ]
 rtld_deps += [ bragi_dep, hel_dep, proto_posix_dep ]
 
 libc_sources += files(
-	'generic/capability.cpp',
 	'generic/drm.cpp',
 	'generic/ensure.cpp',
 	'generic/entry.cpp',
@@ -70,8 +69,7 @@ elif host_machine.cpu_family() == 'x86_64'
 	libc_sources += files(
 		'x86_64/signals.S',
 		'x86_64/thread_entry.S',
-		'x86_64/thread.cpp',
-		'x86_64/assembly-asserts.cpp',
+		'x86_64/thread.cpp'
 	)
 elif host_machine.cpu_family() == 'riscv64'
 	libc_sources += files(
@@ -137,9 +135,6 @@ if not no_headers
 		'include/abi-bits/sigevent.h',
 		'include/abi-bits/utmpx.h',
 		'include/abi-bits/utmp-defines.h',
-		'include/abi-bits/fd_set.h',
-		'include/abi-bits/sem.h',
-		'include/abi-bits/route.h',
 		subdir: 'abi-bits',
 		follow_symlinks: true
 	)

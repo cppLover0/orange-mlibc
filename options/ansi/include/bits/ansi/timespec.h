@@ -1,6 +1,6 @@
 
-#ifndef _MLIBC_ANSI_TIMESPEC_H
-#define _MLIBC_ANSI_TIMESPEC_H
+#ifndef MLIBC_TIMESPEC_H
+#define MLIBC_TIMESPEC_H
 
 #include <bits/ansi/time_t.h>
 
@@ -9,5 +9,5 @@ struct timespec {
 	long tv_nsec;
 };
 
-#endif /* _MLIBC_ANSI_TIMESPEC_H */
+#endif /* MLIBC_TIMESPEC_H */
 

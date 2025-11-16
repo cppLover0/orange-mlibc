@@ -1,5 +1,5 @@
-#ifndef _MLIBC_POSIX_TIME_H
-#define _MLIBC_POSIX_TIME_H
+#ifndef MLIBC_POSIX_TIME_H
+#define MLIBC_POSIX_TIME_H
 
 #include <abi-bits/clockid_t.h>
 #include <abi-bits/sigevent.h>
@@ -40,4 +40,4 @@ int timer_delete(timer_t __timerid);
 }
 #endif
 
-#endif /* _MLIBC_POSIX_TIME_H */
+#endif /* MLIBC_POSIX_TIME_H */

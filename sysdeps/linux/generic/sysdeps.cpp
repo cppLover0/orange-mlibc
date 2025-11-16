@@ -193,15 +193,6 @@ int sys_write(int fd, const void *buffer, size_t size, ssize_t *bytes_written) {
 	return 0;
 }
 
-int sys_writev(int fd, const struct iovec *iovs, int iovc, ssize_t *bytes_written) {
-	auto ret = do_cp_syscall(SYS_writev, fd, iovs, iovc);
-	if(int e = sc_error(ret); e)
-		return e;
-	if(bytes_written)
-		*bytes_written = sc_int_result<ssize_t>(ret);
-	return 0;
-}
-
 int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
 	auto ret = do_syscall(SYS_lseek, fd, offset, whence);
 	if(int e = sc_error(ret); e)
@@ -317,6 +308,15 @@ int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat
 		return e;
 	}
 
+#if defined(__i386__)
+	statbuf->st_atim.tv_sec = statbuf->__st_atim32.tv_sec;
+	statbuf->st_atim.tv_nsec = statbuf->__st_atim32.tv_nsec;
+	statbuf->st_mtim.tv_sec = statbuf->__st_mtim32.tv_sec;
+	statbuf->st_mtim.tv_nsec = statbuf->__st_mtim32.tv_nsec;
+	statbuf->st_ctim.tv_sec = statbuf->__st_ctim32.tv_sec;
+	statbuf->st_ctim.tv_nsec = statbuf->__st_ctim32.tv_nsec;
+#endif
+
 	return 0;
 }
 
@@ -368,8 +368,8 @@ int sys_sigaction(int signum, const struct sigaction *act,
 	static_assert(sizeof(kernel_act.mask) == 8);
 
 	auto ret = do_syscall(SYS_rt_sigaction, signum, act ?
-		&kernel_act : nullptr, oldact ?
-		&kernel_oldact : nullptr, sizeof(kernel_act.mask));
+		&kernel_act : NULL, oldact ?
+		&kernel_oldact : NULL, sizeof(kernel_act.mask));
 	if (int e = sc_error(ret); e)
 		return e;
 
@@ -667,7 +667,7 @@ int sys_clone(void *tcb, pid_t *pid_out, void *stack) {
 	tcb = reinterpret_cast<void *>(user_desc);
 #endif
 
-	auto ret = __mlibc_spawn_thread(flags, stack, pid_out, nullptr, tcb);
+	auto ret = __mlibc_spawn_thread(flags, stack, pid_out, NULL, tcb);
 	if (ret < 0)
 		return ret;
 
@@ -839,32 +839,6 @@ int sys_setpriority(int which, id_t who, int prio) {
 	return 0;
 }
 
-// the first argument of the get/set priority calls is a PRIO_PROCESS constant.
-// the actual macro is not used at the moment because of a wrong #define
-// FIXME once the abi fix PR is merged
-int sys_nice(int increment, int *new_nice) {
-	int current;
-	if (int e = sys_getpriority(0, 0, &current); e)
-		return e;
-
-	if (increment == 0) {
-		*new_nice = current;
-		return 0;
-	}
-
-	// the system call silently clamps the value to the nice range
-	if (int e = sys_setpriority(0, 0, current + increment); e)
-		return e;
-
-	if (int e = sys_getpriority(0, 0, &current); e)
-		return e;
-
-	// NOTE: according to man 2 getpriority, the internal priority values in linux are
-	// in the range 40..1. So we have to convert it.
-	*new_nice = 20 - current;
-	return 0;
-}
-
 int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value) {
 	auto ret = do_syscall(SYS_setitimer, which, new_value, old_value);
 	if (int e = sc_error(ret); e)
@@ -896,7 +870,7 @@ void timer_handle(int, siginfo_t *, void *) {
 void *timer_setup(void *arg) {
 	auto ctx = reinterpret_cast<PosixTimerContext *>(arg);
 
-	sigset_t set{};
+	sigset_t set;
 	sigaddset(&set, SIGTIMER);
 
 	// wait for parent setup to be complete
@@ -911,7 +885,7 @@ void *timer_setup(void *arg) {
 	// notify the parent that the context can be dropped
 	__atomic_store_n(&ctx->workerSem, 1, __ATOMIC_RELEASE);
 
-	siginfo_t si{};
+	siginfo_t si;
 	int signo;
 
 	while(true) {
@@ -924,11 +898,11 @@ void *timer_setup(void *arg) {
 	return nullptr;
 }
 
-} // namespace
+}
 
 int sys_timer_create(clockid_t clk, struct sigevent *__restrict evp, timer_t *__restrict res) {
 	struct linux_uapi_sigevent ksev;
-	struct linux_uapi_sigevent *ksevp = nullptr;
+	struct linux_uapi_sigevent *ksevp = 0;
 	int timer_id;
 
 	switch(evp ? evp->sigev_notify : SIGEV_SIGNAL) {
@@ -955,7 +929,7 @@ int sys_timer_create(clockid_t clk, struct sigevent *__restrict evp, timer_t *__
 				struct sigaction sa{};
 				sa.sa_flags = SA_SIGINFO | SA_RESTART;
 				sa.sa_sigaction = timer_handle;
-				sys_sigaction(SIGTIMER, &sa, nullptr);
+				sys_sigaction(SIGTIMER, &sa, 0);
 				timerThreadInit = true;
 			}
 
@@ -1068,20 +1042,6 @@ int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_re
 	if(int e = sc_error(ret); e)
 		return e;
 	*bytes_read = sc_int_result<int>(ret);
-	return 0;
-}
-
-int sys_capget(cap_user_header_t hdrp, cap_user_data_t datap) {
-	auto ret = do_syscall(SYS_capget, hdrp, datap);
-	if (int e = sc_error(ret); e)
-		return e;
-	return 0;
-}
-
-int sys_capset(cap_user_header_t hdrp, const cap_user_data_t datap) {
-	auto ret = do_syscall(SYS_capset, hdrp, datap);
-	if (int e = sc_error(ret); e)
-		return e;
 	return 0;
 }
 
@@ -1472,7 +1432,7 @@ int sys_if_indextoname(unsigned int index, char *name) {
 	struct ifreq ifr;
 	ifr.ifr_ifindex = index;
 
-	int ret = sys_ioctl(fd, SIOCGIFNAME, &ifr, nullptr);
+	int ret = sys_ioctl(fd, SIOCGIFNAME, &ifr, NULL);
 	close(fd);
 
 	if(ret) {
@@ -1496,7 +1456,7 @@ int sys_if_nametoindex(const char *name, unsigned int *ret) {
 	struct ifreq ifr;
 	strncpy(ifr.ifr_name, name, sizeof ifr.ifr_name);
 
-	r = sys_ioctl(fd, SIOCGIFINDEX, &ifr, nullptr);
+	r = sys_ioctl(fd, SIOCGIFINDEX, &ifr, NULL);
 	close(fd);
 
 	if(r) {
@@ -1510,7 +1470,7 @@ int sys_if_nametoindex(const char *name, unsigned int *ret) {
 
 int sys_ptsname(int fd, char *buffer, size_t length) {
 	int index;
-	if(int e = sys_ioctl(fd, TIOCGPTN, &index, nullptr); e)
+	if(int e = sys_ioctl(fd, TIOCGPTN, &index, NULL); e)
 		return e;
 	if((size_t)snprintf(buffer, length, "/dev/pts/%d", index) >= length) {
 		return ERANGE;
@@ -1521,7 +1481,7 @@ int sys_ptsname(int fd, char *buffer, size_t length) {
 int sys_unlockpt(int fd) {
 	int unlock = 0;
 
-	if(int e = sys_ioctl(fd, TIOCSPTLCK, &unlock, nullptr); e)
+	if(int e = sys_ioctl(fd, TIOCSPTLCK, &unlock, NULL); e)
 		return e;
 
 	return 0;
@@ -1547,13 +1507,13 @@ int sys_thread_setname(void *tcb, const char *name) {
 		return e;
 	}
 
-	if(int e = sys_write(fd, name, strlen(name) + 1, nullptr)) {
+	if(int e = sys_write(fd, name, strlen(name) + 1, NULL)) {
 		return e;
 	}
 
 	sys_close(fd);
 
-	pthread_setcancelstate(cs, nullptr);
+	pthread_setcancelstate(cs, 0);
 
 	return 0;
 }
@@ -1582,7 +1542,7 @@ int sys_thread_getname(void *tcb, char *name, size_t size) {
 	name[real_size - 1] = 0;
 	sys_close(fd);
 
-	pthread_setcancelstate(cs, nullptr);
+	pthread_setcancelstate(cs, 0);
 
 	if(static_cast<ssize_t>(size) <= real_size) {
 		return ERANGE;
@@ -1684,12 +1644,8 @@ static void statfs_to_statvfs(struct statfs *from, struct statvfs *to) {
 		.f_ffree = from->f_ffree,
 		.f_favail = from->f_ffree,
 		.f_fsid = (unsigned long) from->f_fsid.__val[0],
-#if __INTPTR_WIDTH__ == 32
-		.__f_unused = 0,
-#endif
 		.f_flag = from->f_flags,
 		.f_namemax = from->f_namelen,
-		.f_spare = { 0 },
 	};
 }
 

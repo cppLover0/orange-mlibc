@@ -1,5 +1,5 @@
-#ifndef _MLIBC_INTERNAL_BITS_SIGSET_T_H
-#define _MLIBC_INTERNAL_BITS_SIGSET_T_H
+#ifndef MLIBC_BITS_SIGSET_T_H
+#define MLIBC_BITS_SIGSET_T_H
 
 #include <abi-bits/signal.h>
 
@@ -22,4 +22,4 @@ int sigismember(const sigset_t *__sigset, int __sig);
 }
 #endif
 
-#endif /* _MLIBC_INTERNAL_BITS_SIGSET_T_H */
+#endif /*MLIBC_BITS_SIGSET_T_H */

@@ -1,6 +1,6 @@
 
-#ifndef _MLIBC_INTERNAL_NULL_H
-#define _MLIBC_INTERNAL_NULL_H
+#ifndef MLIBC_NULL_H
+#define MLIBC_NULL_H
 
 #ifdef NULL
 #undef NULL
@@ -9,12 +9,8 @@
 #ifndef __cplusplus
 #  define NULL ((void *)0)
 #else
-#  if __cplusplus >= 201103L
-#    define NULL nullptr
-#  else
-#    define NULL __null
-#  endif
+#  define NULL 0
 #endif
 
-#endif /* _MLIBC_INTERNAL_NULL_H */
+#endif /* MLIBC_NULL_H */
 

@@ -1,5 +1,5 @@
-#ifndef _MLIBC_ELF_STARTUP_H
-#define _MLIBC_ELF_STARTUP_H
+#ifndef MLIBC_ELF_STARTUP
+#define MLIBC_ELF_STARTUP
 
 namespace mlibc {
 
@@ -21,4 +21,4 @@ void set_startup_data(int argc, char **argv, char **envp);
 
 } /* namespace mlibc */
 
-#endif /* _MLIBC_ELF_STARTUP_H */
+#endif /* MLIBC_ELF_STARTUP */

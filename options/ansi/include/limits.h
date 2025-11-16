@@ -7,6 +7,24 @@
 # define MB_LEN_MAX 4
 #endif
 
+#ifdef LONG_MAX
+# ifdef LONG_MAX == INT32_MAX
+#  define LONG_BIT 32
+# else
+/* Safe assumption */
+#  define LONG_BIT 64
+# endif
+#elif defined __LONG_MAX__
+# if __LONG_MAX__ == INT32_MAX
+#  define LONG_BIT 32
+# else
+/* Safe assumption */
+#  define LONG_BIT 64
+# endif
+#else
+# error "Unsupported configuration, please define either LONG_MAX or __LONG_MAX__"
+#endif
+
 #undef SCHAR_MIN
 #undef SCHAR_MAX
 #undef CHAR_MIN
@@ -65,6 +83,7 @@
 #define LLONG_MAX __LONG_LONG_MAX__
 #define ULLONG_MAX (__LONG_LONG_MAX__ * 2ULL + 1ULL)
 
+#define NAME_MAX 255
 #define PATH_MAX 4096
 #define LINE_MAX 4096
 #define PIPE_BUF 4096
@@ -72,25 +91,15 @@
 #define CHARCLASS_NAME_MAX 14
 #define RE_DUP_MAX 255
 
-#if !defined(NGROUPS_MAX)
 /* This value is a guaranteed minimum, get the current maximum from sysconf */
 #define NGROUPS_MAX 8
-#endif /* !defined(NGROUPS_MAX) */
-
 /* POSIX states 9 is the minimum for NL_ARGMAX */
 #define NL_ARGMAX 9
 
-#if __INTPTR_MAX__ == __INT64_MAX__
+#if INTPTR_MAX == INT64_MAX
 # define SSIZE_MAX LONG_MAX
-#elif __INTPTR_MAX__ == __INT32_MAX__
+#elif INTPTR_MAX == INT32_MAX
 # define SSIZE_MAX INT_MAX
-#endif
-
-#if __LONG_MAX__ == __INT32_MAX__
-# define LONG_BIT 32
-#else
-/* Safe assumption */
-# define LONG_BIT 64
 #endif
 
 #define _POSIX_ARG_MAX 4096
@@ -100,18 +109,9 @@
 #define _POSIX_TZNAME_MAX 6
 #define _XOPEN_NAME_MAX 255
 
-/* This value is a guaranteed minimum, get the current maximum from sysconf */
-#define TZNAME_MAX _POSIX_TZNAME_MAX
-
 #define PTHREAD_STACK_MIN 16384
 #define PTHREAD_KEYS_MAX 1024
 
 #include <abi-bits/limits.h>
-
-#define IOV_MAX __MLIBC_IOV_MAX
-#define LOGIN_NAME_MAX __MLIBC_LOGIN_NAME_MAX
-#define HOST_NAME_MAX __MLIBC_HOST_NAME_MAX
-#define NAME_MAX __MLIBC_NAME_MAX
-#define OPEN_MAX __MLIBC_OPEN_MAX
 
 #endif /* _LIMITS_H */

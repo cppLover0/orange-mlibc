@@ -10,10 +10,10 @@ extern "C" {
 #include <bits/size_t.h>
 
 int __riscv_hwprobe(struct riscv_hwprobe *pairs, size_t pair_count, size_t cpusetsize, cpu_set_t *cpus,
-	unsigned int flags);
+	unsigned int flags) __attribute__((access(read_write, 1, 2)));
 
 typedef int (*__riscv_hwprobe_t)(struct riscv_hwprobe *pairs, size_t pair_count,
-	size_t cpusetsize, cpu_set_t *cpus, unsigned int flags);
+	size_t cpusetsize, cpu_set_t *cpus, unsigned int flags) __attribute__((access(read_write, 1, 2)));
 
 #ifdef __cplusplus
 }

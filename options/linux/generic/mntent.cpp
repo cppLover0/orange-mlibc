@@ -11,7 +11,7 @@ namespace {
 char *internal_buf;
 size_t internal_bufsize;
 
-} // namespace
+}
 
 #define SENTINEL (char *)&internal_buf
 
@@ -62,12 +62,12 @@ struct mntent *getmntent_r(FILE *f, struct mntent *mnt, char *linebuf, int bufle
 			fgets(linebuf, buflen, f);
 		}
 		if(feof(f) || ferror(f)) {
-			return nullptr;
+			return 0;
 		}
 		if(!strchr(linebuf, '\n')) {
 			fscanf(f, "%*[^\n]%*[\n]");
 			errno = ERANGE;
-			return nullptr;
+			return 0;
 		}
 
 		len = strlen(linebuf);

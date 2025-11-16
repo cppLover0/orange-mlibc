@@ -1,6 +1,5 @@
 #include <drm/drm.h>
 #include <drm/drm_fourcc.h>
-#include <drm/virtgpu_drm.h>
 
 #include <bits/ensure.h>
 #include <bits/errors.hpp>
@@ -1300,10 +1299,11 @@ int ioctl_drm(int fd, unsigned long request, void *arg, int *result, HelHandle h
 		}
 	}
 
-	mlibc::infoLogger() << "mlibc: Unexpected DRM ioctl with number: 0x"
-	                    << frg::hex_fmt(_IOC_NR(request))
+	mlibc::infoLogger() << "mlibc: Unexpected DRM ioctl with"
+	                    << ", number: 0x" << frg::hex_fmt(_IOC_NR(request))
 	                    << " (raw request: " << frg::hex_fmt(request) << ")" << frg::endlog;
-	return EINVAL;
+	__ensure(!"Illegal ioctl request");
+	__builtin_unreachable();
 }
 
 } // namespace mlibc

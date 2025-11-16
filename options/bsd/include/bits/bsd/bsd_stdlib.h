@@ -1,6 +1,6 @@
 
-#ifndef _MLIBC_BSD_STDLIB_H
-#define _MLIBC_BSD_STDLIB_H
+#ifndef MLIBC_BSD_STDLIB_H
+#define MLIBC_BSD_STDLIB_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,5 +16,5 @@ int getloadavg(double *__loadavg, int __count);
 }
 #endif
 
-#endif /* _MLIBC_BSD_STDLIB_H */
+#endif /* MLIBC_BSD_STDLIB_H */
 

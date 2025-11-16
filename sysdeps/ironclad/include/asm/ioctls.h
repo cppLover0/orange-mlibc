@@ -61,7 +61,7 @@
 #define TIOCGRS485               0x542E
 #define TIOCSRS485               0x542F
 #define TIOCGPTN                 3
-#define TIOCSPTLCK               0x5430
+#define TIOCSPTLCK               3
 #define TIOCGDEV                 3
 #define TCGETX                   0x5432
 #define TCSETX                   0x5433
@@ -98,6 +98,6 @@
 #define TIOCPKT_DOSTOP           32
 #define TIOCPKT_IOCTL            64
 #define TIOCSER_TEMT	         0x01
-#define DEV_PARTUUID             0x9821
+#define DEV_UUID                 0x9821
 
 #endif /* _ASM_IOCTLS_H */

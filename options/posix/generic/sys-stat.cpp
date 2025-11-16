@@ -3,7 +3,6 @@
 #include <bits/ensure.h>
 #include <sys/stat.h>
 
-#include <mlibc-config.h>
 #include <mlibc/debug.hpp>
 #include <mlibc/posix-sysdeps.hpp>
 
@@ -144,9 +143,7 @@ int lstat(const char *path, struct stat *result) {
 	return 0;
 }
 
-#if __MLIBC_LINUX_OPTION
 [[gnu::alias("lstat")]] int lstat64(const char *path, struct stat64 *result);
-#endif /* !__MLIBC_LINUX_OPTION */
 
 int fstat(int fd, struct stat *result) {
 	MLIBC_CHECK_OR_ENOSYS(mlibc::sys_stat, -1);
@@ -157,6 +154,4 @@ int fstat(int fd, struct stat *result) {
 	return 0;
 }
 
-#if __MLIBC_LINUX_OPTION
 [[gnu::alias("fstat")]] int fstat64(int fd, struct stat64 *result);
-#endif /* !__MLIBC_LINUX_OPTION */

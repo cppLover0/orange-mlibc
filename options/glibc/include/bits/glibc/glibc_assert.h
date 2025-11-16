@@ -1,5 +1,5 @@
-#ifndef _MLIBC_GLIBC_ASSERT_H
-#define _MLIBC_GLIBC_ASSERT_H
+#ifndef MLIBC_GLIBC_ASSERT_H
+#define MLIBC_GLIBC_ASSERT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +12,12 @@ __attribute__ ((__noreturn__)) void __assert_fail_perror(int __errno, const char
 
 #endif /* !__MLIBC_ABI_ONLY */
 
-#ifdef _GNU_SOURCE
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* MLIBC_GLIBC_ASSERT_H */
+
 #ifdef NDEBUG
 
 #undef assert_perror
@@ -25,10 +30,3 @@ __attribute__ ((__noreturn__)) void __assert_fail_perror(int __errno, const char
 		|| (__assert_fail_perror((errno), __FILE__, __LINE__, __func__), 0))
 
 #endif /* NDEBUG */
-#endif /* _GNU_SOURCE */
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _MLIBC_GLIBC_ASSERT_H */
