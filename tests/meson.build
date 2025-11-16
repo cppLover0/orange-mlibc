@@ -11,18 +11,15 @@ all_test_cases = [
 	'ansi/abs',
 	'ansi/longjmp',
 	'ansi/mbrtoc32',
-	'ansi/strverscmp',
 	'ansi/strftime',
 	'ansi/strchr',
 	'ansi/strrchr',
 	'ansi/wcsrtombs',
 	'ansi/wmemcmp',
 	'ansi/timegm',
+	'ansi/tz',
 	'ansi/ungetc',
-	'ansi/wcsdup',
-	'ansi/wcsncasecmp',
 	'ansi/fopen',
-	'ansi/memmem',
 	'ansi/creal-cimag',
 	'ansi/fenv',
 	'ansi/qsort',
@@ -85,6 +82,7 @@ all_test_cases = [
 	'posix/rlimits',
 	'posix/accept4',
 	'posix/setpriority',
+	'posix/nice',
 	'posix/alarm',
 	'posix/abort', # This test should be in the ANSI tests, but it depends on sigaction
 	'posix/timer',
@@ -104,6 +102,9 @@ all_test_cases = [
 	'posix/usershell',
 	'posix/shm',
 	'posix/swab',
+	'posix/select',
+	'posix/wcsdup',
+	'posix/wcsncasecmp',
 	'glibc/getopt',
 	'glibc/ffsl-ffsll',
 	'glibc/error_message_count',
@@ -114,6 +115,8 @@ all_test_cases = [
 	'glibc/error_at_line',
 	'glibc/getgrouplist',
 	'glibc/rpmatch',
+	'glibc/strverscmp',
+	'glibc/memmem',
 	'linux/xattr',
 	'linux/pthread_setname_np',
 	'linux/pthread_attr',
@@ -143,12 +146,18 @@ fail_test_cases = [
 ]
 
 wrapped_test_cases = [
+	'ansi/tz',
 	'glibc/error',
 	'glibc/error_at_line',
 ]
 
 host_libc_excluded_test_cases = [
 	'bsd/strl', # These functions do not exist on Linux.
+<<<<<<< HEAD
+=======
+	'glibc/error', # These tests depend on mlibc error messages.
+	'glibc/error_at_line', # These tests depend on mlibc error messages.
+>>>>>>> upstream/master
 	'rtld/search-order', # See rtld/search-order/meson.build.
 ]
 host_libc_noasan_test_cases = [
@@ -318,6 +327,20 @@ foreach test_name : all_test_cases
 			link_args: ['-lresolv', '-ldl', '-pthread', '-lm', '-lrt'],
 			native: true,
 		)
-		test(test_short_name, exec, suite: ['host-libc', test_subdir], should_fail: should_fail, timeout: timeout_sec)
+
+		if wrapped_test_cases.contains(test_name)
+			test(test_short_name,
+				py,
+				suite: ['host-libc', test_subdir],
+				should_fail: should_fail,
+				args: [
+					meson.source_root() + '/tests/' + test_name + '.py',
+					exec
+				],
+				timeout: timeout_sec,
+			)
+		else
+			test(test_short_name, exec, suite: ['host-libc', test_subdir], should_fail: should_fail, timeout: timeout_sec)
+		endif
 	endif
 endforeach

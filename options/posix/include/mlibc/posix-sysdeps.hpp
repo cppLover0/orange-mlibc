@@ -52,6 +52,7 @@ int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read);
 [[gnu::weak]] int sys_readv(int fd, const struct iovec *iovs, int iovc, ssize_t *bytes_read);
 
 int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written);
+[[gnu::weak]] int sys_writev(int fd, const struct iovec *iovs, int iovc, ssize_t *bytes_written);
 [[gnu::weak]] int sys_pread(int fd, void *buf, size_t n, off_t off, ssize_t *bytes_read);
 [[gnu::weak]] int sys_pwrite(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_read);
 
@@ -253,6 +254,13 @@ int sys_vm_unmap(void *pointer, size_t size);
 
 [[gnu::weak]] int sys_inet_configured(bool *ipv4, bool *ipv6);
 
+<<<<<<< HEAD
+=======
+[[gnu::weak]] int sys_nice(int nice, int *new_nice);
+
+[[gnu::weak]] int sys_openpt(int oflags, int *fd);
+
+>>>>>>> upstream/master
 } //namespace mlibc
 
 #endif // MLIBC_POSIX_SYSDEPS

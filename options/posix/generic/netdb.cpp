@@ -150,7 +150,11 @@ int getaddrinfo(const char *__restrict node, const char *__restrict service,
 			// corresponding to the node argument. If the canonical name is not available,
 			// then the ai_canonname field shall refer to the `node` argument or a string with
 			// the same contents.
+<<<<<<< HEAD
 			if (node && (flags & AI_CANONNAME) && i == 0)
+=======
+			if (node && (flags & AI_CANONNAME) && i == 0 && !canon.empty())
+>>>>>>> upstream/master
 				out[i].ai.ai_canonname = canon.data();
 
 			if(i)
@@ -192,6 +196,7 @@ int getnameinfo(const struct sockaddr *__restrict addr, socklen_t addr_len,
 		socklen_t serv_len, int flags) {
 	frg::array<uint8_t, 16> addr_array;
 	int family = addr->sa_family;
+	in_port_t port;
 
 	switch(family) {
 		case AF_INET: {
@@ -199,6 +204,7 @@ int getnameinfo(const struct sockaddr *__restrict addr, socklen_t addr_len,
 				return EAI_FAMILY;
 			auto sockaddr = reinterpret_cast<const struct sockaddr_in*>(addr);
 			memcpy(addr_array.data(), reinterpret_cast<const char*>(&sockaddr->sin_addr), 4);
+			port = sockaddr->sin_port;
 			break;
 		}
 		case AF_INET6: {
@@ -207,6 +213,7 @@ int getnameinfo(const struct sockaddr *__restrict addr, socklen_t addr_len,
 				return EAI_FAMILY;
 			auto sockaddr = reinterpret_cast<const struct sockaddr_in6*>(addr);
 			memcpy(addr_array.data(), reinterpret_cast<const char*>(&sockaddr->sin6_addr), 16);
+			port = sockaddr->sin6_port;
 			break;
 		}
 		default:
@@ -241,8 +248,23 @@ int getnameinfo(const struct sockaddr *__restrict addr, socklen_t addr_len,
 	}
 
 	if (serv && serv_len) {
-		__ensure("getnameinfo(): not implemented service resolution yet!");
-		__builtin_unreachable();
+		servent *servent = nullptr;
+
+		if (!(flags & NI_NUMERICSERV)) {
+			servent = getservbyport(port, (flags & NI_DGRAM) ? "udp" : "tcp");
+		}
+
+		if (!servent) {
+			char numserv[6];
+			int printerr = snprintf(numserv, sizeof(numserv), "%u", ntohs(port));
+			if (printerr < 0 || socklen_t(printerr) + 1 > serv_len)
+				return EAI_MEMORY;
+			strlcpy(serv, numserv, serv_len);
+		} else {
+			if (strlen(servent->s_name) + 1 > serv_len)
+				return EAI_MEMORY;
+			strlcpy(serv, servent->s_name, serv_len);
+		}
 	}
 
 	return 0;

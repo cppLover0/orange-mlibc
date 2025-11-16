@@ -36,7 +36,7 @@ extern HIDDEN elf_dyn _DYNAMIC[];
 namespace mlibc {
 	// Declared in options/internal/mlibc/tcb.hpp.
 	bool tcb_available_flag = false;
-}
+} // namespace mlibc
 
 mlibc::RtldConfig rtldConfig;
 
@@ -298,10 +298,10 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
 	libraryPaths.initialize(getAllocator());
 	preloads.initialize(getAllocator());
 
-	void *phdr_pointer = 0;
+	void *phdr_pointer = nullptr;
 	size_t phdr_entry_size = 0;
 	size_t phdr_count = 0;
-	void *entry_pointer = 0;
+	void *entry_pointer = nullptr;
 	void *stack_entropy = nullptr;
 
 	const char *execfn = "(executable)";
@@ -322,8 +322,8 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
 #ifdef __x86_64__
 	// These entries are reserved on x86_64.
 	// TODO: Use a fake PLT stub that reports an error message?
-	_GLOBAL_OFFSET_TABLE_[1] = 0;
-	_GLOBAL_OFFSET_TABLE_[2] = 0;
+	_GLOBAL_OFFSET_TABLE_[1] = nullptr;
+	_GLOBAL_OFFSET_TABLE_[2] = nullptr;
 #endif
 
 	// Validate our own dynamic section.
@@ -383,6 +383,10 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
 	aux += *aux + 1; // First, we skip argc and all args.
 	__ensure(!*aux);
 	aux++;
+
+	const char *env_ld_library_path = nullptr;
+	const char *env_ld_preload = nullptr;
+
 	while(*aux) { // Loop through the environment.
 		auto env = reinterpret_cast<char *>(*aux);
 		frg::string_view view{env};
@@ -397,19 +401,14 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
 		if(name == "LD_SHOW_AUXV" && *value && *value != '0') {
 			ldShowAuxv = true;
 		}else if(name == "LD_LIBRARY_PATH" && *value) {
-			for(auto path : parseList(value, ":;"))
-				libraryPaths->push_back(path);
+			env_ld_library_path = value;
 		}else if(name == "LD_PRELOAD" && *value) {
-			*preloads = parseList(value, " :");
+			env_ld_preload = value;
 		}
 
 		aux++;
 	}
 	aux++;
-
-	for (const frg::string_view path : parseList(MLIBC_DEFAULT_LIBRARY_PATHS, "\n")) {
-		libraryPaths->push_back(path);
-	}
 
 	// Parse the actual vector.
 	while(true) {
@@ -472,6 +471,24 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
 		aux += 2;
 	}
 	globalDebugInterface.base = reinterpret_cast<void*>(ldso_base);
+
+	// Handle the LD_LIBRARY_PATH and LD_PRELOAD environment variables.
+	// This is done here as it needs to know if rtldConfig.secureRequired is set.
+	if (rtldConfig.secureRequired) {
+		mlibc::infoLogger() << "rtld: running in secure mode" << frg::endlog;
+	} else {
+		if (env_ld_library_path) {
+			for(auto path : parseList(env_ld_library_path, ":;"))
+				libraryPaths->push_back(path);
+		}
+
+		if (env_ld_preload)
+			*preloads = parseList(env_ld_preload, " :");
+	}
+
+	for (const frg::string_view path : parseList(MLIBC_DEFAULT_LIBRARY_PATHS, "\n")) {
+		libraryPaths->push_back(path);
+	}
 
 // This is here because libgcc will add a global constructor on glibc Linux
 // (which is what it believes we are due to the aarch64-linux-gnu toolchain)
@@ -618,16 +635,13 @@ void *__dlapi_open(const char *file, int flags, void *returnAddress) {
 	// TODO: Thread-safety!
 	auto rts = rtsCounter++;
 
-	SharedObject *object;
-	if (flags & RTLD_NOLOAD) {
-		object = initialRepository->findLoadedObject(file);
-		if (object && object->globalRts == 0 && (flags & RTLD_GLOBAL)) {
-			// The object was opened with RTLD_LOCAL, but we are called with RTLD_NOLOAD | RTLD_GLOBAL.
-			// According to the man page, we should promote to the global scope here.
-			object->globalRts = rts;
-			globalScope->appendObject(object);
-		}
-	} else {
+	SharedObject *object = initialRepository->findLoadedObject(file);
+	if (object && object->globalRts == 0 && (flags & RTLD_GLOBAL)) {
+		// The object was opened with RTLD_LOCAL, but we are called with RTLD_GLOBAL.
+		// According to the man page, we should promote to the global scope here.
+		object->globalRts = rts;
+		globalScope->appendObject(object);
+	} else if ((flags & RTLD_NOLOAD) == 0) {
 		bool isGlobal = flags & RTLD_GLOBAL;
 		Scope *newScope = isGlobal ? globalScope.get() : nullptr;
 
@@ -636,8 +650,8 @@ void *__dlapi_open(const char *file, int flags, void *returnAddress) {
 			// In order to know which RUNPATH / RPATH to process, we must find the calling object.
 			SharedObject *origin = initialRepository->findCaller(returnAddress);
 			if (!origin) {
-				mlibc::panicLogger() << "rtld: unable to determine calling object of dlopen "
-					<< "(ra = " << returnAddress << ")" << frg::endlog;
+				// When we can't find the origin, assume it's the main executable (copies glibc behavior)
+				origin = executableSO;
 			}
 
 			objectResult = initialRepository->requestObjectWithName(file, origin, newScope, !isGlobal, rts);
@@ -820,6 +834,7 @@ int __dlapi_reverse(const void *ptr, __dlapi_symbol *info) {
 			auto bucket = reinterpret_cast<uint32_t *>(uintptr_t(hash_table) + sizeof(*hash_table) + (hash_table->bloomSize * sizeof(elf_addr)));
 			auto chains = reinterpret_cast<uint32_t *>(uintptr_t(bucket) + hash_table->nBuckets * 4);
 
+<<<<<<< HEAD
 			for(size_t i = 0; i < hash_table->nBuckets; i++) {
 				if(bucket[i] > last_sym)
 					last_sym = bucket[i];
@@ -828,6 +843,17 @@ int __dlapi_reverse(const void *ptr, __dlapi_symbol *info) {
 			last_sym++;
 			while(!(chains[last_sym] & 1))
 				last_sym++;
+=======
+			if (hash_table->nBuckets) {
+				for(size_t i = 0; i < hash_table->nBuckets; i++) {
+				if(last_sym < bucket[i])
+					last_sym = bucket[i];
+				}
+
+				while(!(chains[last_sym - hash_table->symbolOffset] & 1))
+					last_sym++;
+			}
+>>>>>>> upstream/master
 
 			start_symbols = hash_table->symbolOffset;
 			num_symbols = last_sym;
@@ -838,7 +864,7 @@ int __dlapi_reverse(const void *ptr, __dlapi_symbol *info) {
 		for(size_t i = start_symbols; i < num_symbols; i++) {
 			ObjectSymbol cand{object, (elf_sym *)(object->baseAddress
 					+ object->symbolTableOffset + i * sizeof(elf_sym))};
-			if(eligible(cand) && cand.virtualAddress() == reinterpret_cast<uintptr_t>(ptr)) {
+			if(eligible(cand) && cand.contains(reinterpret_cast<uintptr_t>(ptr))) {
 				if (logDlCalls)
 					mlibc::infoLogger() << "rtld: Found symbol " << cand.getString() << " in object "
 							<< object->path << frg::endlog;
@@ -871,7 +897,7 @@ int __dlapi_reverse(const void *ptr, __dlapi_symbol *info) {
 				info->file = object->path.data();
 				info->base = reinterpret_cast<void *>(object->baseAddress);
 				info->symbol = nullptr;
-				info->address = 0;
+				info->address = nullptr;
 				info->elf_symbol = nullptr;
 				info->link_map = &object->linkMap;
 				return 0;
@@ -936,7 +962,7 @@ void __dlapi_enter(uintptr_t *entry_stack) {
 
 #if __MLIBC_GLIBC_OPTION
 
-extern "C" [[gnu::visibility("default")]] int _dl_find_object(void *address, dl_find_object *result) {
+extern "C" [[gnu::visibility("default")]] int __dlapi_find_object(void *address, dl_find_object *result) {
 	for(const SharedObject *object : initialRepository->loadedObjects) {
 		if(object->baseAddress > reinterpret_cast<uintptr_t>(address))
 			continue;
@@ -981,6 +1007,10 @@ extern "C" [[gnu::visibility("default")]] int _dl_find_object(void *address, dl_
 
 	return -1;
 }
+
+#if !defined(MLIBC_STATIC_BUILD)
+extern "C" [[gnu::visibility("default"), gnu::alias("__dlapi_find_object")]] int _dl_find_object(void *address, dl_find_object *result);
+#endif
 
 #endif // __MLIBC_GLIBC_OPTION
 

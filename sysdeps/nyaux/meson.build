@@ -67,8 +67,6 @@ if not no_headers
 		'include/abi-bits/statfs.h',
 		'include/abi-bits/statx.h',
 		'include/abi-bits/time.h',
-		'include/abi-bits/utmpx.h',
-		'include/abi-bits/utmp-defines.h',
 		subdir: 'abi-bits',
 		follow_symlinks: true
 	)

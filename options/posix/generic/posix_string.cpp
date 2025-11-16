@@ -149,12 +149,33 @@ void *memrchr(const void *m, int c, size_t n) {
 		if(s[n] == c)
 			return (void *)(s + n);
 	}
-	return 0;
+	return nullptr;
 }
 
 char *strerror_l(int errnum, locale_t) {
 	mlibc::infoLogger() << "mlibc: strerror_l locale is ignored!" << frg::endlog;
 	return strerror(errnum);
+}
+
+void *memmem(const void *hs, size_t haystackLen, const void *nd, size_t needleLen) {
+	const char *haystack = static_cast<const char *>(hs);
+	const char *needle = static_cast<const char *>(nd);
+
+	for (size_t i = 0; i < haystackLen; i++) {
+		bool found = true;
+
+		for (size_t j = 0; j < needleLen; j++) {
+			if (i + j >= haystackLen || haystack[i + j] != needle[j]) {
+				found = false;
+				break;
+			}
+		}
+
+		if(found)
+			return const_cast<char *>(&haystack[i]);
+	}
+
+	return nullptr;
 }
 
 // BSD extensions.

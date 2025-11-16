@@ -73,6 +73,13 @@ if not no_headers
 		'include/abi-bits/sigevent.h',
 		'include/abi-bits/utmpx.h',
 		'include/abi-bits/utmp-defines.h',
+<<<<<<< HEAD
+=======
+		'include/abi-bits/riscv-hwprobe.h',
+		'include/abi-bits/fd_set.h',
+		'include/abi-bits/sem.h',
+		'include/abi-bits/route.h',
+>>>>>>> upstream/master
 		subdir: 'abi-bits',
 		follow_symlinks: true,
 	)
