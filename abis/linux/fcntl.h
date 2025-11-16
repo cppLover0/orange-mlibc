@@ -104,6 +104,11 @@ struct f_owner_ex {
 
 #define F_OWNER_TID 0
 
+#define F_OWNER_PID 1
+
+
+#define F_OWNER_PGRP 2
+
 #define POSIX_FADV_NORMAL 0
 #define POSIX_FADV_RANDOM 1
 #define POSIX_FADV_SEQUENTIAL 2
