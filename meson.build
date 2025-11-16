@@ -264,19 +264,20 @@ elif host_machine.system() == 'astral'
 	libc_include_dirs += include_directories('sysdeps/astral/include')
 	internal_conf.set10('MLIBC_MAP_DSO_SEGMENTS', true)
 	internal_conf.set10('MLIBC_MAP_FILE_WINDOWS', true)
+	internal_conf.set10('MLIBC_MMAP_ALLOCATE_DSO', true)
 	subdir('sysdeps/astral')
 elif host_machine.system() == 'menix'
 	rtld_include_dirs += include_directories('sysdeps/menix/include')
 	libc_include_dirs += include_directories('sysdeps/menix/include')
 	subdir('sysdeps/menix')
-elif host_machine.system() == 'orange'
-	rtld_include_dirs += include_directories('sysdeps/orange/include')
-	libc_include_dirs += include_directories('sysdeps/orange/include')
-	subdir('sysdeps/orange')
 elif host_machine.system() == 'nyaux'
 	rtld_include_dirs += include_directories('sysdeps/nyaux/include')
 	libc_include_dirs += include_directories('sysdeps/nyaux/include')
 	subdir('sysdeps/nyaux')
+elif host_machine.system() == 'orange'
+	rtld_include_dirs += include_directories('sysdeps/orange/include')
+	libc_include_dirs += include_directories('sysdeps/orange/include')
+	subdir('sysdeps/orange')
 else
 	error('No sysdeps defined for OS: ' + host_machine.system())
 endif
@@ -425,6 +426,8 @@ if not no_headers
 		'options/internal/include/bits/ensure.h',
 		'options/internal/include/bits/machine.h',
 		'options/internal/include/bits/mbstate.h',
+		'options/internal/include/bits/locale.h',
+		'options/internal/include/bits/locale-internals.h',
 		'options/internal/include/bits/nl_item.h',
 		'options/internal/include/bits/null.h',
 		'options/internal/include/bits/off_t.h',
@@ -438,6 +441,7 @@ if not no_headers
 		'options/internal/include/bits/winsize.h',
 		'options/internal/include/bits/search.h',
 		'options/internal/include/bits/getopt.h',
+		'options/internal/include/bits/reclen_t.h',
 		subdir: 'bits'
 	)
 endif
@@ -501,6 +505,7 @@ if not headers_only
 
 	libc_cpp_args = [
 		'-Wno-unknown-pragmas',
+		'-DFRG_HAVE_LIBC',
 	]
 
 	if c_compiler.get_id() == 'clang'
@@ -522,7 +527,6 @@ if not headers_only
 	if library_type in ['static', 'both']
 		static_cpp_args = [
 			'-DMLIBC_STATIC_BUILD',
-			'-DFRIGG_HAVE_LIBC',
 		]
 		ld_static_lib = static_library(ld_library_name, rtld_sources,
 			name_prefix: '',

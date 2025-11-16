@@ -1,6 +1,3 @@
-#ifdef _GNU_SOURCE
-#undef _GNU_SOURCE
-#endif
 
 #include <asm/ioctls.h>
 #include <dirent.h>
@@ -22,6 +19,7 @@
 #include <mlibc/all-sysdeps.hpp>
 #include <mlibc/allocator.hpp>
 #include <mlibc/posix-pipe.hpp>
+#include <protocols/posix/supercalls.hpp>
 
 #include <fs.frigg_bragi.hpp>
 #include <posix.frigg_bragi.hpp>
@@ -1102,14 +1100,17 @@ int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
 	managarm::posix::CntRequest<MemoryAllocator> req(getSysdepsAllocator());
 	req.set_request_type(managarm::posix::CntReqType::EPOLL_CALL);
 	req.set_timeout(timeout > 0 ? int64_t{timeout} * 1000000 : timeout);
+	req.set_cancellation_id(allocateCancellationId());
 
 	for (nfds_t i = 0; i < count; i++) {
 		req.add_fds(fds[i].fd);
 		req.add_events(fds[i].events);
 	}
 
-	auto [offer, send_req, recv_resp] = exchangeMsgsSync(
+	auto [offer, send_req, recv_resp] = exchangeMsgsSyncCancellable(
 	    getPosixLane(),
+	    req.cancellation_id(),
+	    -1,
 	    helix_ng::offer(
 	        helix_ng::sendBragiHeadOnly(req, getSysdepsAllocator()), helix_ng::recvInline()
 	    )
@@ -1121,6 +1122,75 @@ int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
 
 	managarm::posix::SvrResponse<MemoryAllocator> resp(getSysdepsAllocator());
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
+	if (resp.error() != managarm::posix::Errors::SUCCESS) {
+		return resp.error() | toErrno;
+	} else {
+		__ensure(resp.events_size() == count);
+
+		int m = 0;
+		for (nfds_t i = 0; i < count; i++) {
+			if (resp.events(i))
+				m++;
+			fds[i].revents = resp.events(i);
+		}
+
+		*num_events = m;
+		return 0;
+	}
+}
+
+int sys_ppoll(
+    struct pollfd *fds,
+    nfds_t count,
+    const struct timespec *ts,
+    const sigset_t *mask,
+    int *num_events
+) {
+	uint64_t former = 0, seq = 0, unused;
+
+	if (mask)
+		HEL_CHECK(helSyscall2_2(
+		    kHelObserveSuperCall + posix::superSigMask,
+		    SIG_SETMASK,
+		    *reinterpret_cast<const HelWord *>(mask),
+		    &former,
+		    &seq
+		));
+
+	SignalGuard guard;
+	managarm::posix::CntRequest<MemoryAllocator> req(getSysdepsAllocator());
+	req.set_request_type(managarm::posix::CntReqType::EPOLL_CALL);
+	req.set_timeout(ts ? (ts->tv_sec * 1'000'000'000 + ts->tv_nsec) : -1);
+	req.set_cancellation_id(allocateCancellationId());
+	req.set_signal_seq(seq);
+	req.set_has_signal_seq(mask != nullptr);
+
+	for (nfds_t i = 0; i < count; i++) {
+		req.add_fds(fds[i].fd);
+		req.add_events(fds[i].events);
+	}
+
+	auto [offer, send_req, recv_resp] = exchangeMsgsSyncCancellable(
+	    getPosixLane(),
+	    req.cancellation_id(),
+	    -1,
+	    helix_ng::offer(
+	        helix_ng::sendBragiHeadOnly(req, getSysdepsAllocator()), helix_ng::recvInline()
+	    )
+	);
+
+	HEL_CHECK(offer.error());
+	HEL_CHECK(send_req.error());
+	HEL_CHECK(recv_resp.error());
+
+	managarm::posix::SvrResponse<MemoryAllocator> resp(getSysdepsAllocator());
+	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
+
+	if (mask)
+		HEL_CHECK(helSyscall2_2(
+		    kHelObserveSuperCall + posix::superSigMask, SIG_SETMASK, former, &unused, &unused
+		));
+
 	if (resp.error() != managarm::posix::Errors::SUCCESS) {
 		return resp.error() | toErrno;
 	} else {
@@ -1644,7 +1714,7 @@ int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
 	SignalGuard sguard;
 
 	// We do not support O_TMPFILE.
-	if (flags & O_TMPFILE)
+	if ((flags & O_TMPFILE) == O_TMPFILE)
 		return EOPNOTSUPP;
 
 	uint32_t proto_flags = 0;
@@ -1665,7 +1735,7 @@ int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
 		proto_flags |= managarm::posix::OpenFlags::OF_NOCTTY;
 	if (flags & O_NOFOLLOW)
 		proto_flags |= managarm::posix::OpenFlags::OF_NOFOLLOW;
-	if (flags & O_DIRECTORY)
+	if ((flags & O_TMPFILE) == O_DIRECTORY)
 		proto_flags |= managarm::posix::OpenFlags::OF_DIRECTORY;
 
 	if (flags & O_PATH)
@@ -2694,7 +2764,7 @@ int sys_madvise(void *, size_t, int) {
 
 int sys_ptsname(int fd, char *buffer, size_t length) {
 	int index;
-	if (int e = sys_ioctl(fd, TIOCGPTN, &index, NULL); e)
+	if (int e = sys_ioctl(fd, TIOCGPTN, &index, nullptr); e)
 		return e;
 	if ((size_t)snprintf(buffer, length, "/dev/pts/%d", index) >= length) {
 		return ERANGE;
@@ -2705,7 +2775,7 @@ int sys_ptsname(int fd, char *buffer, size_t length) {
 int sys_unlockpt(int fd) {
 	int unlock = 0;
 
-	if (int e = sys_ioctl(fd, TIOCSPTLCK, &unlock, NULL); e)
+	if (int e = sys_ioctl(fd, TIOCSPTLCK, &unlock, nullptr); e)
 		return e;
 
 	return 0;
@@ -2863,7 +2933,7 @@ int sys_fstatfs(int fd, struct statfs *buf) {
 	if (resp.error() != managarm::posix::Errors::SUCCESS)
 		return resp.error() | toErrno;
 
-	memset(buf, NULL, sizeof(struct statfs));
+	memset(buf, 0, sizeof(struct statfs));
 	buf->f_type = resp.fstype();
 	return 0;
 }
@@ -2982,7 +3052,7 @@ int sys_statfs(const char *path, struct statfs *buf) {
 	if (resp.error() != managarm::posix::Errors::SUCCESS)
 		return resp.error() | toErrno;
 
-	memset(buf, NULL, sizeof(struct statfs));
+	memset(buf, 0, sizeof(struct statfs));
 	buf->f_type = resp.fstype();
 	return 0;
 }

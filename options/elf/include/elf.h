@@ -483,7 +483,9 @@ enum {
 	DT_VERDEF = 0x6ffffffc,
 	DT_VERDEFNUM = 0x6ffffffd,
 	DT_VERNEED = 0x6ffffffe,
-	DT_VERNEEDNUM = 0x6fffffff
+	DT_VERNEEDNUM = 0x6fffffff,
+	DT_LOPROC = 0x70000000,
+	DT_HIPROC = 0x7fffffff
 };
 
 enum {
@@ -608,7 +610,7 @@ typedef struct {
 #define SHN_LORESERVE	0xff00
 #define SHN_COMMON	0xfff2
 #define SHN_XINDEX	0xffff
-#define SHN_HIRESERVE	0xff00
+#define SHN_HIRESERVE	0xffff
 
 /* values for e_machine */
 #define EM_NONE			0

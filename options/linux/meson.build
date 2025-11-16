@@ -3,6 +3,7 @@ if not linux_option
 	subdir_done()
 endif
 libc_sources += files(
+	'generic/fcntl.cpp',
 	'generic/mntent.cpp',
 	'generic/sys-epoll.cpp',
 	'generic/sys-inotify.cpp',
@@ -27,7 +28,7 @@ libc_sources += files(
 	'generic/sys-klog.cpp',
 	'generic/sched.cpp',
 	'generic/sys-quota.cpp',
-	'generic/capabilities.cpp',
+	'generic/capability.cpp',
 	'generic/cpuset.cpp',
 	'generic/sys-swap.cpp',
 	'generic/sys-statfs.cpp',

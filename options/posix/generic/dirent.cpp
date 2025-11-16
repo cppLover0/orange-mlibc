@@ -5,9 +5,11 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <bits/ensure.h>
 #include <frg/allocation.hpp>
+#include <mlibc-config.h>
 #include <mlibc/allocator.hpp>
 #include <mlibc/posix-sysdeps.hpp>
 #include <mlibc/debug.hpp>
@@ -83,7 +85,9 @@ struct dirent *readdir(DIR *dir) {
 	return &dir->__current;
 }
 
+#if __MLIBC_LINUX_OPTION
 [[gnu::alias("readdir")]] struct dirent64 *readdir64(DIR *dir);
+#endif /* !__MLIBC_LINUX_OPTION */
 
 int readdir_r(DIR *dir, struct dirent *entry, struct dirent **result) {
 	if(!mlibc::sys_read_entries) {
@@ -97,7 +101,7 @@ int readdir_r(DIR *dir, struct dirent *entry, struct dirent **result) {
 			__ensure(!"mlibc::sys_read_entries() failed");
 		dir->__ent_next = 0;
 		if(!dir->__ent_limit) {
-			*result = NULL;
+			*result = nullptr;
 			return 0;
 		}
 	}

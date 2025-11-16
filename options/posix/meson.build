@@ -54,6 +54,7 @@ libc_sources += files(
 	'generic/sys-sem.cpp',
 	'generic/sys-ipc.cpp',
 	'generic/time.cpp',
+	'generic/wchar.cpp',
 	'generic/wordexp.cpp',
 	'generic/mqueue.cpp',
 	'generic/utmpx.cpp',
@@ -105,6 +106,7 @@ if not no_headers
 		'include/semaphore.h',
 		'include/mqueue.h',
 		'include/utmpx.h',
+		'include/endian.h',
 	)
 	install_headers(
 		'include/arpa/inet.h',
@@ -169,7 +171,6 @@ if not no_headers
 		'include/bits/posix/posix_wctype.h',
 		'include/bits/posix/stat.h',
 		'include/bits/posix/timeval.h',
-		'include/bits/posix/fd_set.h',
 		'include/bits/posix/pthread_t.h',
 		'include/bits/posix/timer_t.h',
 		subdir: 'bits/posix'

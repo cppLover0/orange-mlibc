@@ -10,7 +10,6 @@
 #include <linux/input.h>
 #include <linux/kd.h>
 #include <linux/nvme_ioctl.h>
-#include <linux/sockios.h>
 #include <linux/usb/cdc-wdm.h>
 #include <linux/vt.h>
 #include <net/if.h>
@@ -31,9 +30,9 @@
 #include <fs.frigg_bragi.hpp>
 #include <posix.frigg_bragi.hpp>
 
-// avoid flock redefinition
-#define HAVE_ARCH_STRUCT_FLOCK
-#include <linux/timerfd.h>
+#define SIOCETHTOOL 0x8946
+#define SIOCGSKNS 0x894C
+#define TFD_IOC_SET_TICKS _IOW('T', 0, __u64)
 
 namespace mlibc {
 
@@ -124,6 +123,7 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 			} else {
 				fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
 			}
+			*result = 0;
 			return 0;
 		}
 		case FIONREAD: {
@@ -161,7 +161,7 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 				__ensure(resp.error() == managarm::fs::Errors::SUCCESS);
 
 				*argp = resp.fionread_count();
-
+				*result = 0;
 				return 0;
 			}
 		}
@@ -185,6 +185,7 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 			managarm::posix::SvrResponse<MemoryAllocator> resp(getSysdepsAllocator());
 			resp.ParseFromArray(recvResp.data(), recvResp.length());
 			__ensure(resp.error() == managarm::posix::Errors::SUCCESS);
+			*result = 0;
 			return 0;
 		}
 		case TCGETS: {
@@ -273,13 +274,9 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 
 			managarm::fs::GenericIoctlReply<MemoryAllocator> resp(getSysdepsAllocator());
 			resp.ParseFromArray(recv_resp.data(), recv_resp.length());
+			if (resp.error() != managarm::fs::Errors::SUCCESS)
+				return resp.error() | toErrno;
 
-			if (resp.error() == managarm::fs::Errors::ILLEGAL_ARGUMENT) {
-				return EINVAL;
-			} else if (resp.error() == managarm::fs::Errors::INSUFFICIENT_PERMISSIONS) {
-				return EPERM;
-			}
-			__ensure(resp.error() == managarm::fs::Errors::SUCCESS);
 			*result = resp.result();
 			return 0;
 		}
@@ -351,6 +348,36 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 			*result = resp.result();
 			return 0;
 		}
+		case TIOCNOTTY: {
+			managarm::fs::GenericIoctlRequest<MemoryAllocator> req(getSysdepsAllocator());
+			req.set_command(request);
+
+			auto [offer, send_ioctl_req, send_req, imbue_creds, recv_resp] = exchangeMsgsSync(
+			    handle,
+			    helix_ng::offer(
+			        helix_ng::sendBragiHeadOnly(ioctl_req, getSysdepsAllocator()),
+			        helix_ng::sendBragiHeadOnly(req, getSysdepsAllocator()),
+			        helix_ng::imbueCredentials(),
+			        helix_ng::recvInline()
+			    )
+			);
+
+			HEL_CHECK(offer.error());
+			HEL_CHECK(send_ioctl_req.error());
+			if (imbue_creds.error() == kHelErrDismissed)
+				return ENOTTY;
+			HEL_CHECK(imbue_creds.error());
+			HEL_CHECK(send_req.error());
+			HEL_CHECK(recv_resp.error());
+
+			managarm::fs::GenericIoctlReply<MemoryAllocator> resp(getSysdepsAllocator());
+			resp.ParseFromArray(recv_resp.data(), recv_resp.length());
+			if (resp.error() != managarm::fs::Errors::SUCCESS)
+				return resp.error() | toErrno;
+
+			*result = resp.result();
+			return 0;
+		}
 		case TIOCGPTN: {
 			auto param = reinterpret_cast<int *>(arg);
 
@@ -399,24 +426,16 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 
 			HEL_CHECK(offer.error());
 			HEL_CHECK(send_ioctl_req.error());
-			if (send_req.error())
-				return EINVAL;
 			HEL_CHECK(send_req.error());
-			if (imbue_creds.error()) {
-				infoLogger(
-				) << "mlibc: TIOCGPGRP used on unexpected socket, returning EINVAL (FIXME)"
-				  << frg::endlog;
-				return EINVAL;
-			}
+			if (imbue_creds.error() == kHelErrDismissed)
+				return ENOTTY;
 			HEL_CHECK(imbue_creds.error());
 			HEL_CHECK(recv_resp.error());
 
 			managarm::fs::GenericIoctlReply<MemoryAllocator> resp(getSysdepsAllocator());
 			resp.ParseFromArray(recv_resp.data(), recv_resp.length());
-			if (resp.error() == managarm::fs::Errors::NOT_A_TERMINAL) {
-				return ENOTTY;
-			}
-			__ensure(resp.error() == managarm::fs::Errors::SUCCESS);
+			if (resp.error() != managarm::fs::Errors::SUCCESS)
+				return resp.error() | toErrno;
 			*result = resp.result();
 			*static_cast<int *>(arg) = resp.pid();
 			return 0;
@@ -451,12 +470,9 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 
 			managarm::fs::GenericIoctlReply<MemoryAllocator> resp(getSysdepsAllocator());
 			resp.ParseFromArray(recv_resp.data(), recv_resp.length());
-			if (resp.error() == managarm::fs::Errors::INSUFFICIENT_PERMISSIONS) {
-				return EPERM;
-			} else if (resp.error() == managarm::fs::Errors::ILLEGAL_ARGUMENT) {
-				return EINVAL;
-			}
-			__ensure(resp.error() == managarm::fs::Errors::SUCCESS);
+			if (resp.error() != managarm::fs::Errors::SUCCESS)
+				return resp.error() | toErrno;
+
 			*result = resp.result();
 			return 0;
 		}
@@ -713,6 +729,7 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 
 		param[0] = resp.values_size();
 
+		*result = 0;
 		return 0;
 	} else if (_IOC_TYPE(request) == 'E' && _IOC_NR(request) == _IOC_NR(EVIOCGLED(0))) {
 		// Returns the current LED state.
@@ -1201,6 +1218,7 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 
 		managarm::fs::GenericIoctlReply<MemoryAllocator> resp(getSysdepsAllocator());
 		resp.ParseFromArray(recv_resp.data(), recv_resp.length());
+		*result = 0;
 		return 0;
 	} else if (request == FICLONE || request == FICLONERANGE) {
 		mlibc::infoLogger() << "\e[35mmlibc: FICLONE/FICLONERANGE are no-ops" << frg::endlog;
@@ -1220,8 +1238,8 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 	                    << " type: 0x" << frg::hex_fmt(_IOC_TYPE(request)) << ", number: 0x"
 	                    << frg::hex_fmt(_IOC_NR(request))
 	                    << " (raw request: " << frg::hex_fmt(request) << ")" << frg::endlog;
-	__ensure(!"Illegal ioctl request");
-	__builtin_unreachable();
+
+	return ENOSYS;
 }
 
 } // namespace mlibc
