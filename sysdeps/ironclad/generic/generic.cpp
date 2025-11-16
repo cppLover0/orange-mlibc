@@ -1310,8 +1310,6 @@ int sys_sysconf(int num, long *rret) {
 		case _SC_THREAD_STACK_MIN:
 			*rret = 0x1000;
 			return 0;
-<<<<<<< HEAD
-=======
 		case _SC_CLK_TCK:
 			ret = sys_clock_getres(CLOCK_MONOTONIC, &secs, &nanos);
 			if (ret == 0) {
@@ -1320,7 +1318,6 @@ int sys_sysconf(int num, long *rret) {
 			} else {
 				return ret;
 			}
->>>>>>> upstream/master
 		default:
 			return EINVAL;
 	}

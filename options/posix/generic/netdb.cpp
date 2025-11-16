@@ -150,11 +150,7 @@ int getaddrinfo(const char *__restrict node, const char *__restrict service,
 			// corresponding to the node argument. If the canonical name is not available,
 			// then the ai_canonname field shall refer to the `node` argument or a string with
 			// the same contents.
-<<<<<<< HEAD
-			if (node && (flags & AI_CANONNAME) && i == 0)
-=======
 			if (node && (flags & AI_CANONNAME) && i == 0 && !canon.empty())
->>>>>>> upstream/master
 				out[i].ai.ai_canonname = canon.data();
 
 			if(i)

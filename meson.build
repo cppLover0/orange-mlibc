@@ -270,14 +270,14 @@ elif host_machine.system() == 'menix'
 	rtld_include_dirs += include_directories('sysdeps/menix/include')
 	libc_include_dirs += include_directories('sysdeps/menix/include')
 	subdir('sysdeps/menix')
-elif host_machine.system() == 'orange'
-	rtld_include_dirs += include_directories('sysdeps/orange/include')
-	libc_include_dirs += include_directories('sysdeps/orange/include')
-	subdir('sysdeps/orange')
 elif host_machine.system() == 'nyaux'
 	rtld_include_dirs += include_directories('sysdeps/nyaux/include')
 	libc_include_dirs += include_directories('sysdeps/nyaux/include')
 	subdir('sysdeps/nyaux')
+elif host_machine.system() == 'orange'
+	rtld_include_dirs += include_directories('sysdeps/orange/include')
+	libc_include_dirs += include_directories('sysdeps/orange/include')
+	subdir('sysdeps/orange')
 else
 	error('No sysdeps defined for OS: ' + host_machine.system())
 endif
@@ -441,10 +441,7 @@ if not no_headers
 		'options/internal/include/bits/winsize.h',
 		'options/internal/include/bits/search.h',
 		'options/internal/include/bits/getopt.h',
-<<<<<<< HEAD
-=======
 		'options/internal/include/bits/reclen_t.h',
->>>>>>> upstream/master
 		subdir: 'bits'
 	)
 endif

@@ -115,10 +115,7 @@
 #define SYSCALL_LISTMOUNTS          104
 #define SYSCALL_UNAME               105
 #define SYSCALL_LISTTHREADS         106
-<<<<<<< HEAD
-=======
 #define SYSCALL_SENDSOCKCTL         107
->>>>>>> upstream/master
 #define SYSCALL_LISTNETINTER        108
 #define SYSCALL_DUMPLOGS            109
 #define SYSCALL_LISTFLOCKS          110
@@ -150,11 +147,8 @@
 #define SYSCALL_NVMM_VCPU_DUMP      136
 #define SYSCALL_NVMM_VCPU_STOP      137
 #define SYSCALL_SETSID              138
-<<<<<<< HEAD
-=======
 #define SYSCALL_PCI_READ            139
 #define SYSCALL_PCI_WRITE           140
->>>>>>> upstream/master
 
 #if defined(__x86_64__)
 #define SYSCALL0(NUM) ({ \

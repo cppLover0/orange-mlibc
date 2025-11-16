@@ -106,10 +106,7 @@ if not no_headers
 		'include/semaphore.h',
 		'include/mqueue.h',
 		'include/utmpx.h',
-<<<<<<< HEAD
-=======
 		'include/endian.h',
->>>>>>> upstream/master
 	)
 	install_headers(
 		'include/arpa/inet.h',

@@ -30,15 +30,9 @@
 #include <fs.frigg_bragi.hpp>
 #include <posix.frigg_bragi.hpp>
 
-<<<<<<< HEAD
-// avoid flock redefinition
-#define HAVE_ARCH_STRUCT_FLOCK
-#include <linux/timerfd.h>
-=======
 #define SIOCETHTOOL 0x8946
 #define SIOCGSKNS 0x894C
 #define TFD_IOC_SET_TICKS _IOW('T', 0, __u64)
->>>>>>> upstream/master
 
 namespace mlibc {
 
@@ -1224,10 +1218,7 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 
 		managarm::fs::GenericIoctlReply<MemoryAllocator> resp(getSysdepsAllocator());
 		resp.ParseFromArray(recv_resp.data(), recv_resp.length());
-<<<<<<< HEAD
-=======
 		*result = 0;
->>>>>>> upstream/master
 		return 0;
 	} else if (request == FICLONE || request == FICLONERANGE) {
 		mlibc::infoLogger() << "\e[35mmlibc: FICLONE/FICLONERANGE are no-ops" << frg::endlog;

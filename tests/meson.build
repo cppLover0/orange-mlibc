@@ -153,11 +153,8 @@ wrapped_test_cases = [
 
 host_libc_excluded_test_cases = [
 	'bsd/strl', # These functions do not exist on Linux.
-<<<<<<< HEAD
-=======
 	'glibc/error', # These tests depend on mlibc error messages.
 	'glibc/error_at_line', # These tests depend on mlibc error messages.
->>>>>>> upstream/master
 	'rtld/search-order', # See rtld/search-order/meson.build.
 ]
 host_libc_noasan_test_cases = [

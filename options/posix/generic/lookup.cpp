@@ -27,8 +27,6 @@ namespace {
 	constexpr unsigned int RECORD_CNAME = 5;
 	constexpr unsigned int RECORD_PTR = 12;
 	constexpr unsigned int RECORD_AAAA = 28;
-<<<<<<< HEAD
-=======
 
 	int get_poll_timeout(struct timespec *original_time) {
 		struct timespec current_time;
@@ -47,7 +45,6 @@ namespace {
 		// TODO resolv.conf can specify a timeout and we ignore it currently.
 		return frg::max(5000l - (current_time.tv_sec * 1000 + current_time.tv_nsec / 1000000), 0l);
 	}
->>>>>>> upstream/master
 } // namespace
 
 static frg::string<MemoryAllocator> read_dns_name(char *buf, char *&it) {
@@ -150,9 +147,6 @@ int lookup_name_dns(struct lookup_result &buf, const char *name,
 
 	char response[256];
 	int num_ans = 0;
-<<<<<<< HEAD
-	while ((rlen = recvfrom(fd, response, 256, 0, nullptr, nullptr)) >= 0) {
-=======
 	int fds_ready;
 	struct timespec start_time;
 
@@ -170,7 +164,6 @@ int lookup_name_dns(struct lookup_result &buf, const char *name,
 			return -EAI_SYSTEM;
 		}
 
->>>>>>> upstream/master
 		if ((size_t)rlen < sizeof(struct dns_header))
 			continue;
 

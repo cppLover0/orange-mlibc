@@ -254,13 +254,10 @@ int sys_vm_unmap(void *pointer, size_t size);
 
 [[gnu::weak]] int sys_inet_configured(bool *ipv4, bool *ipv6);
 
-<<<<<<< HEAD
-=======
 [[gnu::weak]] int sys_nice(int nice, int *new_nice);
 
 [[gnu::weak]] int sys_openpt(int oflags, int *fd);
 
->>>>>>> upstream/master
 } //namespace mlibc
 
 #endif // MLIBC_POSIX_SYSDEPS

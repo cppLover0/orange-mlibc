@@ -1124,8 +1124,6 @@ int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
 	if (resp.error() != managarm::posix::Errors::SUCCESS) {
 		return resp.error() | toErrno;
-<<<<<<< HEAD
-=======
 	} else {
 		__ensure(resp.events_size() == count);
 
@@ -1195,7 +1193,6 @@ int sys_ppoll(
 
 	if (resp.error() != managarm::posix::Errors::SUCCESS) {
 		return resp.error() | toErrno;
->>>>>>> upstream/master
 	} else {
 		__ensure(resp.events_size() == count);
 

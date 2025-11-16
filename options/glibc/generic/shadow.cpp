@@ -210,22 +210,14 @@ struct spwd *getspnam(const char *name) {
 struct spwd *fgetspent(FILE *f) {
 	static struct spwd sp;
 	static char *line;
-<<<<<<< HEAD
-	struct spwd *res = 0;
-=======
 	struct spwd *res = nullptr;
->>>>>>> upstream/master
 	size_t size = 0;
 	int cs;
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 	if(getline(&line, &size, f) >= 0 && __parsespent(line, &sp) >= 0) {
 		res = &sp;
 	}
-<<<<<<< HEAD
-	pthread_setcancelstate(cs, 0);
-=======
 	pthread_setcancelstate(cs, nullptr);
->>>>>>> upstream/master
 	return res;
 }
 
