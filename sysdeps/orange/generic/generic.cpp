@@ -651,4 +651,10 @@ void sys_yield() {
     asm volatile("syscall" : "=a"(ret) : "a"(61) : "rcx", "r11");
 }
 
+int sys_rename(const char *path, const char *new_path) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(62), "D"(path), "S"(new_path) : "rcx","r11");
+    return ret;
+}
+
 }
