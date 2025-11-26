@@ -462,8 +462,8 @@ int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
 int sys_msg_recv(int fd, struct msghdr *hdr, int flags, ssize_t *length) {
     ssize_t total_read = 0;
     int ret = 0;
-    // hdr->msg_controllen = 0;
-    // hdr->msg_flags = 0;
+    hdr->msg_controllen = 0;
+    hdr->msg_flags = 0;
     for (int i = 0; i < hdr->msg_iovlen; i++) {
         ssize_t recv_bytes = 0;
         int res = sys_read(fd, hdr->msg_iov[i].iov_base, hdr->msg_iov[i].iov_len, &recv_bytes);
