@@ -535,12 +535,11 @@ if not headers_only
 		'-DMLIBC_BUILDING_RTLD',
 		'-Wno-extern-c-compat',
 		'-Wno-unknown-pragmas',
-	] + mlibc_c_args
+	]
 
 	libc_cpp_args = [
 		'-Wno-unknown-pragmas',
-		'-DFRG_HAVE_LIBC',
-	] + mlibc_c_args
+	]
 
 	if c_compiler.get_id() == 'clang'
 		libc_cpp_args += ['-fno-sanitize=function', '-Wno-vla-cxx-extension']
@@ -561,19 +560,17 @@ if not headers_only
 	if library_type in ['static', 'both']
 		static_cpp_args = [
 			'-DMLIBC_STATIC_BUILD',
+			'-DFRIGG_HAVE_LIBC',
 		]
 		ld_static_lib = static_library(ld_library_name, rtld_sources,
 			name_prefix: '',
-			cpp_args: mlibc_c_args + ld_cpp_args + static_cpp_args,
-			link_args: mlibc_link_args,
+			cpp_args: ld_cpp_args + static_cpp_args,
 			include_directories: rtld_include_dirs,
 			dependencies: rtld_deps + rtlib_deps,
 			install: false
 		)
 		libc_static = static_library('c', libc_all_sources,
-			c_args: mlibc_c_args,
 			cpp_args: static_cpp_args + ['-fno-stack-protector', libc_cpp_args],
-			link_args: mlibc_link_args,
 			include_directories: libc_include_dirs,
 			dependencies: libc_deps + rtlib_deps,
 			link_with: [ld_static_lib],
@@ -584,8 +581,7 @@ if not headers_only
 	if library_type in ['shared', 'both']
 		ld_shared_lib = shared_library(ld_library_name, rtld_sources + rtld_dso_sources,
 			name_prefix: '',
-			cpp_args: mlibc_c_args + ld_cpp_args,
-			link_args: mlibc_link_args,
+			cpp_args: ld_cpp_args,
 			include_directories: rtld_include_dirs,
 			dependencies: rtld_deps + rtlib_deps,
 			install: true
@@ -593,26 +589,25 @@ if not headers_only
 		hide_everything_ld = (meson.current_source_dir()
 				      / 'scripts/hide-everything.ld')
 		libc_shared = shared_library('c', libc_all_sources,
-			c_args: [mlibc_c_args],
 			cpp_args: [libc_cpp_args],
 			include_directories: libc_include_dirs,
 			dependencies: libc_deps + rtlib_deps,
 			link_with: [ld_shared_lib],
 			link_whole: libc_sublibs,
-			link_args: ['-Wl,--version-script,' + hide_everything_ld, mlibc_link_args],
+			link_args: ['-Wl,--version-script,' + hide_everything_ld],
 			link_depends: [hide_everything_ld],
 			install: true
 		)
 	endif
 
-	library('pthread', 'dummy-libs/libpthread/src/dummy.cpp', cpp_args: libc_cpp_args, link_args: mlibc_link_args, install: true)
-	library('rt', 'dummy-libs/librt/src/dummy.cpp', cpp_args: libc_cpp_args, link_args: mlibc_link_args, install: true)
-	library('util', 'dummy-libs/libutil/src/dummy.cpp', cpp_args: libc_cpp_args, link_args: mlibc_link_args, install: true)
-	library('m', 'dummy-libs/libm/src/dummy.cpp', cpp_args: libc_cpp_args, link_args: mlibc_link_args, install: true)
-	library('resolv', 'dummy-libs/libresolv/src/dummy.cpp', cpp_args: libc_cpp_args, link_args: mlibc_link_args, install: true)
-	library('dl', 'dummy-libs/libdl/src/dummy.cpp', cpp_args: libc_cpp_args, link_args: mlibc_link_args, install: true)
-	library('ssp', 'dummy-libs/libssp/src/dummy.cpp', cpp_args: libc_cpp_args, link_args: mlibc_link_args, install: true)
-	library('ssp_nonshared', 'dummy-libs/libssp_nonshared/src/dummy.cpp', cpp_args: libc_cpp_args, link_args: mlibc_link_args, install: true)
+	library('pthread', 'dummy-libs/libpthread/src/dummy.cpp', cpp_args: libc_cpp_args, install: true)
+	library('rt', 'dummy-libs/librt/src/dummy.cpp', cpp_args: libc_cpp_args, install: true)
+	library('util', 'dummy-libs/libutil/src/dummy.cpp', cpp_args: libc_cpp_args, install: true)
+	library('m', 'dummy-libs/libm/src/dummy.cpp', cpp_args: libc_cpp_args, install: true)
+	library('resolv', 'dummy-libs/libresolv/src/dummy.cpp', cpp_args: libc_cpp_args, install: true)
+	library('dl', 'dummy-libs/libdl/src/dummy.cpp', cpp_args: libc_cpp_args, install: true)
+	library('ssp', 'dummy-libs/libssp/src/dummy.cpp', cpp_args: libc_cpp_args, install: true)
+	library('ssp_nonshared', 'dummy-libs/libssp_nonshared/src/dummy.cpp', cpp_args: libc_cpp_args, install: true)
 endif
 
 summary_info = {}
