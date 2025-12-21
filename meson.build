@@ -521,8 +521,6 @@ if not headers_only
 		libgcc = declare_dependency(link_args: libgcc_path)
 		rtlib_deps += libgcc
 
-		error(libgcc_path)
-
 	endif
 
 	ld_cpp_args = [
