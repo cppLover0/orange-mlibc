@@ -1,14 +1,18 @@
 
-#ifndef MLIBC_BSD_STDLIB_H
-#define MLIBC_BSD_STDLIB_H
+#ifndef _MLIBC_BSD_STDLIB_H
+#define _MLIBC_BSD_STDLIB_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <mlibc-config.h>
+
 #ifndef __MLIBC_ABI_ONLY
 
+#if defined(_DEFAULT_SOURCE)
 int getloadavg(double *__loadavg, int __count);
+#endif
 
 #endif /* !__MLIBC_ABI_ONLY */
 
@@ -16,5 +20,5 @@ int getloadavg(double *__loadavg, int __count);
 }
 #endif
 
-#endif /* MLIBC_BSD_STDLIB_H */
+#endif /* _MLIBC_BSD_STDLIB_H */
 

@@ -37,19 +37,33 @@ int sys_futex_tid() {
 
 int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
 	// This implementation is inherently signal-safe.
+	int err = 0;
+
 	if (time) {
-		if (helFutexWait(pointer, expected, time->tv_nsec + time->tv_sec * 1000000000))
-			return -1;
-		return 0;
+		uint64_t tick;
+		HEL_CHECK(helGetClock(&tick));
+
+		err = helFutexWait(pointer, expected, tick + time->tv_nsec + time->tv_sec * 1000000000);
+	} else {
+		err = helFutexWait(pointer, expected, -1);
 	}
-	if (helFutexWait(pointer, expected, -1))
-		return -1;
-	return 0;
+
+	switch (err) {
+		case kHelErrNone: return 0;
+		case kHelErrTimeout: return ETIMEDOUT;
+		case kHelErrCancelled: return EINTR;
+		case kHelErrIllegalArgs: return EINVAL;
+		default: {
+			mlibc::infoLogger() << "mlibc: helFutexWait returned unexpected error "
+								<< err << frg::endlog;
+			return EINVAL;
+		}
+	}
 }
 
 int sys_futex_wake(int *pointer) {
 	// This implementation is inherently signal-safe.
-	if (helFutexWake(pointer))
+	if (helFutexWake(pointer, UINT32_MAX))
 		return -1;
 	return 0;
 }
@@ -478,8 +492,10 @@ int sys_setregid(gid_t rgid, gid_t egid) {
 }
 
 pid_t sys_gettid() {
-	// TODO: use an actual gettid syscall.
-	return sys_getpid();
+	HelWord tid = 0;
+	HEL_CHECK(helSyscall0_1(kHelCallSuper + posix::superGetTid, &tid));
+
+	return tid;
 }
 
 pid_t sys_getpid() {
@@ -545,10 +561,7 @@ int sys_getsid(pid_t pid, pid_t *sid) {
 
 	managarm::posix::SvrResponse<MemoryAllocator> resp(getSysdepsAllocator());
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
-	if (resp.error() == managarm::posix::Errors::NO_SUCH_RESOURCE) {
-		*sid = 0;
-		return ESRCH;
-	} else if (resp.error() != managarm::posix::Errors::SUCCESS) {
+	if (resp.error() != managarm::posix::Errors::SUCCESS) {
 		return resp.error() | toErrno;
 	}
 
@@ -575,10 +588,7 @@ int sys_getpgid(pid_t pid, pid_t *pgid) {
 
 	managarm::posix::SvrResponse<MemoryAllocator> resp(getSysdepsAllocator());
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
-	if (resp.error() == managarm::posix::Errors::NO_SUCH_RESOURCE) {
-		*pgid = 0;
-		return ESRCH;
-	} else if (resp.error() != managarm::posix::Errors::SUCCESS) {
+	if (resp.error() != managarm::posix::Errors::SUCCESS) {
 		return resp.error() | toErrno;
 	}
 
@@ -673,19 +683,29 @@ int sys_setschedparam(void *tcb, int policy, const struct sched_param *param) {
 	return 0;
 }
 
-int sys_clone(void *tcb, pid_t *pid_out, void *stack) {
+int sys_clone(void *tcb, pid_t *tid_out, void *stack) {
 	(void)tcb;
 
-	HelWord pid = 0;
-	HEL_CHECK(helSyscall2_1(
+	HelWord posixErr = 0;
+	HelWord tid = 0;
+	posix::superCloneArgs args{
+	    .flags = (CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD),
+	};
+
+	HEL_CHECK(helSyscall3_2(
 	    kHelCallSuper + posix::superClone,
 	    reinterpret_cast<HelWord>(__mlibc_start_thread),
 	    reinterpret_cast<HelWord>(stack),
-	    &pid
+	    reinterpret_cast<HelWord>(&args),
+	    &posixErr,
+	    &tid
 	));
 
-	if (pid_out)
-		*pid_out = pid;
+	if (posixErr)
+		return managarm::posix::Errors(posixErr) | toErrno;
+
+	if (tid_out)
+		*tid_out = tid;
 
 	return 0;
 }
@@ -708,7 +728,7 @@ int sys_tcb_set(void *pointer) {
 
 void sys_thread_exit() {
 	// This implementation is inherently signal-safe.
-	HEL_CHECK(helSyscall1(kHelCallSuper + posix::superExit, 0));
+	HEL_CHECK(helSyscall1(kHelCallSuper + posix::superThreadExit, 0));
 	__builtin_trap();
 }
 
@@ -732,13 +752,13 @@ int sys_thread_setname(void *tcb, const char *name) {
 		return e;
 	}
 
-	if (int e = sys_write(fd, name, strlen(name) + 1, NULL)) {
+	if (int e = sys_write(fd, name, strlen(name) + 1, nullptr)) {
 		return e;
 	}
 
 	sys_close(fd);
 
-	pthread_setcancelstate(cs, 0);
+	pthread_setcancelstate(cs, nullptr);
 
 	return 0;
 }
@@ -767,7 +787,7 @@ int sys_thread_getname(void *tcb, char *name, size_t size) {
 	name[real_size - 1] = 0;
 	sys_close(fd);
 
-	pthread_setcancelstate(cs, 0);
+	pthread_setcancelstate(cs, nullptr);
 
 	if (static_cast<ssize_t>(size) <= real_size) {
 		return ERANGE;

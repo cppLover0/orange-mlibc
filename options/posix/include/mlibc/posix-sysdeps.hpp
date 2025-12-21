@@ -52,6 +52,7 @@ int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read);
 [[gnu::weak]] int sys_readv(int fd, const struct iovec *iovs, int iovc, ssize_t *bytes_read);
 
 int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written);
+[[gnu::weak]] int sys_writev(int fd, const struct iovec *iovs, int iovc, ssize_t *bytes_written);
 [[gnu::weak]] int sys_pread(int fd, void *buf, size_t n, off_t off, ssize_t *bytes_read);
 [[gnu::weak]] int sys_pwrite(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_read);
 
@@ -97,7 +98,6 @@ int sys_close(int fd);
 [[gnu::weak]] int sys_setgid(gid_t gid);
 [[gnu::weak]] int sys_setegid(gid_t egid);
 [[gnu::weak]] int sys_getgroups(size_t size, gid_t *list, int *ret);
-[[gnu::weak]] void sys_yield();
 [[gnu::weak]] int sys_sleep(time_t *secs, long *nanos);
 [[gnu::weak]] int sys_fork(pid_t *child);
 [[gnu::weak]] int sys_execve(const char *path, char *const argv[], char *const envp[]);
@@ -155,18 +155,21 @@ int sys_vm_unmap(void *pointer, size_t size);
 [[gnu::weak]] int sys_setsid(pid_t *sid);
 [[gnu::weak]] int sys_tcgetattr(int fd, struct termios *attr);
 [[gnu::weak]] int sys_tcsetattr(int, int, const struct termios *attr);
+[[gnu::weak]] int sys_tcsendbreak(int fd, int dur);
 [[gnu::weak]] int sys_tcflow(int, int);
 [[gnu::weak]] int sys_tcflush(int fd, int queue);
 [[gnu::weak]] int sys_tcdrain(int);
 [[gnu::weak]] int sys_pipe(int *fds, int flags);
 [[gnu::weak]] int sys_socketpair(int domain, int type_and_flags, int proto, int *fds);
 [[gnu::weak]] int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events);
+[[gnu::weak]] int sys_ppoll(struct pollfd *fds, nfds_t count, const struct timespec *ts, const sigset_t *mask, int *num_events);
 [[gnu::weak]] int sys_ioctl(int fd, unsigned long request, void *arg, int *result);
 [[gnu::weak]] int sys_getsockopt(int fd, int layer, int number,
 		void *__restrict buffer, socklen_t *__restrict size);
 [[gnu::weak]] int sys_setsockopt(int fd, int layer, int number,
 		const void *buffer, socklen_t size);
 [[gnu::weak]] int sys_shutdown(int sockfd, int how);
+[[gnu::weak]] int sys_sockatmark(int sockfd, int *out);
 [[gnu::weak]] int sys_sigprocmask(int how, const sigset_t *__restrict set,
 		sigset_t *__restrict retrieve);
 [[gnu::weak]] int sys_thread_sigmask(int how, const sigset_t *__restrict set,
@@ -198,6 +201,7 @@ int sys_vm_unmap(void *pointer, size_t size);
 [[gnu::weak]] int sys_sigaltstack(const stack_t *ss, stack_t *oss);
 [[gnu::weak]] int sys_sigsuspend(const sigset_t *set);
 [[gnu::weak]] int sys_sigpending(sigset_t *set);
+[[gnu::weak]] int sys_sigqueue(pid_t pid, int sig, const union sigval val);
 [[gnu::weak]] int sys_setgroups(size_t size, const gid_t *list);
 [[gnu::weak]] int sys_memfd_create(const char *name, int flags, int *fd);
 [[gnu::weak]] int sys_madvise(void *addr, size_t length, int advice);
@@ -210,6 +214,7 @@ int sys_vm_unmap(void *pointer, size_t size);
 [[gnu::weak]] int sys_timer_settime(timer_t t, int flags, const struct itimerspec *__restrict val, struct itimerspec *__restrict old);
 [[gnu::weak]] int sys_timer_gettime(timer_t t, struct itimerspec *val);
 [[gnu::weak]] int sys_timer_delete(timer_t t);
+[[gnu::weak]] int sys_timer_getoverrun(timer_t t, int *out);
 [[gnu::weak]] int sys_times(struct tms *tms, clock_t *out);
 [[gnu::weak]] int sys_uname(struct utsname *buf);
 [[gnu::weak]] int sys_pause();
@@ -252,6 +257,10 @@ int sys_vm_unmap(void *pointer, size_t size);
 [[gnu::weak]] int sys_shmget(int *shm_id, key_t key, size_t size, int shmflg);
 
 [[gnu::weak]] int sys_inet_configured(bool *ipv4, bool *ipv6);
+
+[[gnu::weak]] int sys_nice(int nice, int *new_nice);
+
+[[gnu::weak]] int sys_openpt(int oflags, int *fd);
 
 } //namespace mlibc
 

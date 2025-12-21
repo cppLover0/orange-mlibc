@@ -4,6 +4,7 @@
 
 #include <mlibc-config.h>
 #include <bits/types.h>
+#include <bits/null.h>
 #include <bits/size_t.h>
 #include <bits/ssize_t.h>
 #include <bits/off_t.h>
@@ -22,19 +23,43 @@
 extern "C" {
 #endif
 
-#define _POSIX_VERSION 200809L
+#define _POSIX_VERSION 202405L
 #define _POSIX2_VERSION _POSIX_VERSION
-#define _XOPEN_VERSION 700
+#define _XOPEN_VERSION 800
 
+#define _POSIX_ADVISORY_INFO _POSIX_VERSION
+#define _POSIX_ASYNCHRONOUS_IO _POSIX_VERSION
+#define _POSIX_BARRIERS _POSIX_VERSION
+#define _POSIX_CHOWN_RESTRICTED _POSIX_VERSION
+#define _POSIX_CLOCK_SELECTION _POSIX_VERSION
 #define _POSIX_FSYNC _POSIX_VERSION
 #define _POSIX_IPV6 _POSIX_VERSION
 #define _POSIX_JOB_CONTROL 1
+#define _POSIX_MEMORY_PROTECTION _POSIX_VERSION
+#define _POSIX_MONOTONIC_CLOCK 0
+#define _POSIX_NO_TRUNC _POSIX_VERSION
+#define _POSIX_READER_WRITER_LOCKS _POSIX_VERSION
+#define _POSIX_REALTIME_SIGNALS _POSIX_VERSION
+#define _POSIX_REGEXP _POSIX_VERSION
 #define _POSIX_SAVED_IDS 1
+#define _POSIX_SEMAPHORES _POSIX_VERSION
 #define _POSIX_SHELL 1
 #define _POSIX_SPAWN _POSIX_VERSION
 #define _POSIX_THREADS _POSIX_VERSION
 #define _POSIX_THREAD_SAFE_FUNCTIONS _POSIX_VERSION
-#define _POSIX_MONOTONIC_CLOCK 0
+#define _POSIX_TIMEOUTS _POSIX_VERSION
+#define _POSIX_TIMERS _POSIX_VERSION
+
+/* mmap, msync, munmap */
+#define _POSIX_MAPPED_FILES _POSIX_VERSION
+/* mlockall, munlockall */
+#define _POSIX_MEMLOCK _POSIX_VERSION
+/* mlock, munlock */
+#define _POSIX_MEMLOCK_RANGE _POSIX_VERSION
+/* mmap, munmap, shm_open, shm_unlink */
+#define _POSIX_SHARED_MEMORY_OBJECTS _POSIX_VERSION
+/* open, msync, fsync, fdatasync */
+#define _POSIX_SYNCHRONIZED_IO _POSIX_VERSION
 
 /* MISSING: additional _POSIX and _XOPEN feature macros */
 /* MISSING: _POSIX_TIMESTAMP_RESOLUTION and _POSIX2_SYMLINKS */
@@ -82,11 +107,6 @@ extern "C" {
 #define _CS_V7_ENV 1149
 
 /* MISSING: SEEK macros from stdio.h */
-
-#define F_LOCK 1
-#define F_TEST 2
-#define F_TLOCK 3
-#define F_ULOCK 4
 
 /* MISSING: _PC macros */
 /* For now, use the Linux ABI for _PC constants. */
@@ -264,19 +284,27 @@ unsigned int alarm(unsigned int __seconds);
 int chdir(const char *__path);
 int chown(const char *__path, uid_t __uid, gid_t __gid);
 int close(int __fd);
-ssize_t confstr(int __name, char *__buf, size_t __size);
+size_t confstr(int __name, char *__buf, size_t __size);
 char *ctermid(char *__s);
 int dup(int __fd);
 int dup2(int __src_fd, int __dest_fd);
+
+#if __MLIBC_POSIX2024 || defined(_GNU_SOURCE)
+int dup3(int __fd, int __newfd, int __flags);
+#endif
+
 __attribute__((__noreturn__)) void _exit(int __status);
-void endusershell(void);
 int execl(const char *__path, const char *__arg, ...);
 int execle(const char *__path, const char *__arg, ...);
 int execlp(const char *__file, const char *__arg, ...);
 int execv(const char *__path, char *const __argv[]);
 int execve(const char *__path, char *const __argv[], char *const __envp[]);
 int execvp(const char *__file, char *const __argv[]);
+
+#if defined(_GNU_SOURCE)
 int execvpe(const char *__path, char *const __argv[], char *const __envp[]);
+#endif /* defined(_GNU_SOURCE) */
+
 int faccessat(int __fd, const char *__path, int __mode, int __flags);
 int fchdir(int __fd);
 int fchown(int __fd, uid_t __uid, gid_t __gid);
@@ -284,46 +312,60 @@ int fchownat(int __fd, const char *__path, uid_t __uid, gid_t __gid, int __flags
 int fdatasync(int __fd);
 int fexecve(int __fd, char *const __argv[], char *const __envp[]);
 pid_t fork(void);
+
+/* functions removed in Issue 7 */
+#if defined(_DEFAULT_SOURCE) || (defined(__MLIBC_XOPEN) && __MLIBC_XOPEN < 700)
 pid_t vfork(void);
+
+typedef __mlibc_uint32 useconds_t;
+
+int usleep(useconds_t __usec);
+#endif /* defined(_DEFAULT_SOURCE) || (defined(__MLIBC_XOPEN) && __MLIBC_XOPEN < 700) */
+
 long fpathconf(int __fd, int __name);
 int fsync(int __fd);
 int ftruncate(int __fd, off_t __size);
-int ftruncate64(int __fd, off64_t __size);
 char *getcwd(char *__buffer, size_t __size);
 gid_t getegid(void);
 uid_t geteuid(void);
 gid_t getgid(void);
 int getgroups(int __size, gid_t __list[]);
-long gethostid(void);
 int gethostname(char *__buffer, size_t __max_length);
-int sethostname(const char *__buffer, size_t __max_length);
 char *getlogin(void);
 int getlogin_r(char *__buffer, size_t __size);
 int getopt(int __argc, char *const __argv[], const char *__optstring);
-char *getpass(const char *__prompt);
 pid_t getpgid(pid_t __pid);
 pid_t getpgrp(void);
 pid_t getpid(void);
 pid_t getppid(void);
 pid_t getsid(pid_t __pid);
 uid_t getuid(void);
-char *getusershell(void);
 int isatty(int __fd);
 int lchown(const char *__path, uid_t __uid, gid_t __gid);
 int link(const char *__oldpath, const char *__newpath);
 int linkat(int __olddirfd, const char *__oldpath, int __newdirfd, const char *__newpath, int __flags);
+
+#if defined(_DEFAULT_SOURCE) || __MLIBC_XOPEN >= 500
+#define F_LOCK 1
+#define F_TEST 2
+#define F_TLOCK 3
+#define F_ULOCK 4
+
 int lockf(int __fd, int __op, off_t __size);
+#endif
+
 off_t lseek(int __fd, off_t __offset, int __whence);
-off64_t lseek64(int __fd, off64_t __offset, int __whence);
+
+#if defined(_DEFAULT_SOURCE) || __MLIBC_XOPEN
 int nice(int __increment);
+#endif
+
 long pathconf(const char *__path, int __name);
 int pause(void);
 int pipe(int __pipefd[2]);
 ssize_t pread(int __fd, void *__buf, size_t __size, off_t __offset);
-ssize_t pread64(int __fd, void *__buf, size_t __size, off_t __offset);
 ssize_t pwrite(int __fd, const void *__buf, size_t __size, off_t __offset);
-ssize_t pwrite64(int __fd, const void *__buf, size_t __size, off_t __offset);
-ssize_t read(int fd, void *buffer, size_t size);
+ssize_t read(int __fd, void *__buffer, size_t __size);
 ssize_t readlink(const char *__restrict __path, char *__restrict __buf, size_t __size);
 ssize_t readlinkat(int __dirfd, const char *__restrict __path, char *__restrict __buf, size_t __size);
 int rmdir(const char *__path);
@@ -331,29 +373,65 @@ int setegid(gid_t __egid);
 int seteuid(uid_t __euid);
 int setgid(gid_t __gid);
 int setpgid(pid_t __pid, pid_t __pgid);
+
+#if defined(_DEFAULT_SOURCE) || (__MLIBC_POSIX1 && !__MLIBC_POSIX2024)
 pid_t setpgrp(void);
+#endif /* defined(_DEFAULT_SOURCE) || (__MLIBC_POSIX1 && !__MLIBC_POSIX2024) */
+
+#if defined(_DEFAULT_SOURCE) || __MLIBC_XOPEN >= 500
+long gethostid(void);
+void sync(void);
+
 int setregid(gid_t __rgid, gid_t __egid);
 int setreuid(uid_t __ruid, uid_t __euid);
+#endif /* defined(_DEFAULT_SOURCE) || __MLIBC_XOPEN >= 500 */
+
 pid_t setsid(void);
 int setuid(uid_t __uid);
-void setusershell(void);
 unsigned int sleep(unsigned int __seconds);
+
+#if __MLIBC_XOPEN
 void swab(const void *__restrict __from, void *__restrict __to, ssize_t __size);
+#endif
+
 int symlink(const char *__target, const char *__linkpath);
 int symlinkat(const char *__target, int __newdirfd, const char *__linkpath);
-void sync(void);
 long sysconf(int __name);
 pid_t tcgetpgrp(int __fd);
 int tcsetpgrp(int __fd, pid_t __pgrp);
 int truncate(const char *__path, off_t __size);
-int truncate64(const char *__path, off64_t __size);
 char *ttyname(int __fd);
 int ttyname_r(int __fd, char *__buf, size_t __size);
 int unlink(const char *__path);
 int unlinkat(int __dirfd, const char *__path, int __flags);
 ssize_t write(int __fd, const void *__buffer, size_t __size);
 
+#if __MLIBC_LINUX_OPTION && defined(_LARGEFILE64_SOURCE)
+
+int ftruncate64(int __fd, off64_t __size);
+off64_t lseek64(int __fd, off64_t __offset, int __whence);
+ssize_t pread64(int __fd, void *__buf, size_t __size, off_t __offset);
+ssize_t pwrite64(int __fd, const void *__buf, size_t __size, off_t __offset);
+int truncate64(const char *__path, off64_t __size);
+
+#endif /* __MLIBC_LINUX_OPTION && defined(_LARGEFILE64_SOURCE) */
+
+#if defined(_DEFAULT_SOURCE)
+
+int sethostname(const char *__buffer, size_t __max_length);
+int getdomainname(char *__name, size_t __len);
+int setdomainname(const char *__name, size_t __len);
+char *getusershell(void);
+void endusershell(void);
+void setusershell(void);
+int daemon(int __nochdir, int __noclose);
+
+#endif /* defined(_DEFAULT_SOURCE) */
+
+#if defined(_GNU_SOURCE)
 extern char **environ;
+#endif /* defined(_GNU_SOURCE) */
+
 extern char *optarg;
 extern int optind;
 extern int opterr;
@@ -362,35 +440,36 @@ extern int optopt;
 #endif /* !__MLIBC_ABI_ONLY */
 
 /* Non-POSIX functions supported by Linux. */
-#if UINTPTR_MAX == UINT64_MAX
-typedef __mlibc_uint64 useconds_t;
-#else
-typedef __mlibc_uint32 useconds_t;
-#endif
-
 #ifndef __MLIBC_ABI_ONLY
 
+#if defined(_DEFAULT_SOURCE) || (defined(__MLIBC_XOPEN) && __MLIBC_XOPEN < 600)
+int getdtablesize(void);
 int getpagesize(void);
-char *get_current_dir_name(void);
-int usleep(useconds_t __usec);
+char *getpass(const char *__prompt);
 int chroot(const char *__path);
-int daemon(int __nochdir, int __noclose);
+void *sbrk(intptr_t __increment);
+#endif /* defined(_DEFAULT_SOURCE) || (defined(__MLIBC_XOPEN) && __MLIBC_XOPEN < 600) */
+
+#if defined(_GNU_SOURCE)
+char *get_current_dir_name(void);
+#endif
 
 /* This is a Linux extension */
+#if defined(_GNU_SOURCE)
 pid_t gettid(void);
+#endif
+
 int getentropy(void *__buffer, size_t __size);
 
 int pipe2(int *__pipefd, int __flags);
 
+#if defined(_GNU_SOURCE) || __MLIBC_XOPEN >= 800
 int setresuid(uid_t __ruid, uid_t __euid, uid_t __suid);
 int setresgid(gid_t __rgid, gid_t __egid, gid_t __sgid);
 
-/* Glibc extensions. */
-int getdomainname(char *__name, size_t __len);
-int setdomainname(const char *__name, size_t __len);
-
 int getresuid(uid_t *__ruid, uid_t *__euid, uid_t *__suid);
 int getresgid(gid_t *__rgid, gid_t *__egid, gid_t *__sgid);
+#endif /* defined(_GNU_SOURCE) || __MLIBC_XOPEN >= 800 */
 
 #endif /* !__MLIBC_ABI_ONLY */
 
@@ -400,10 +479,6 @@ int getresgid(gid_t *__rgid, gid_t *__egid, gid_t *__sgid);
 
 #if __MLIBC_LINUX_OPTION
 #	include <bits/linux/linux_unistd.h>
-#endif
-
-#if __MLIBC_BSD_OPTION
-#	include <bits/bsd/bsd_unistd.h>
 #endif
 
 #endif /* _UNISTD_H */

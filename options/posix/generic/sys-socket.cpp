@@ -8,6 +8,8 @@
 #include <mlibc/debug.hpp>
 #include <mlibc/posix-sysdeps.hpp>
 
+static_assert(std::is_unsigned_v<sa_family_t>, "sa_family_t must be unsigned!");
+
 int accept(int fd, struct sockaddr *__restrict addr_ptr, socklen_t *__restrict addr_length) {
 	int newfd;
 	MLIBC_CHECK_OR_ENOSYS(mlibc::sys_accept, -1);
@@ -71,8 +73,12 @@ int getsockname(int fd, struct sockaddr *__restrict addr_ptr, socklen_t *__restr
 
 int getsockopt(int fd, int layer, int number,
 		void *__restrict buffer, socklen_t *__restrict size) {
-	MLIBC_CHECK_OR_ENOSYS(mlibc::sys_getsockopt, -1);
-	return mlibc::sys_getsockopt(fd, layer, number, buffer, size);
+	auto sysdep = MLIBC_CHECK_OR_ENOSYS(mlibc::sys_getsockopt, -1);
+	if (int e = sysdep(fd, layer, number, buffer, size); e) {
+		errno = e;
+		return -1;
+	}
+	return 0;
 }
 
 int listen(int fd, int backlog) {
@@ -85,7 +91,7 @@ int listen(int fd, int backlog) {
 }
 
 ssize_t recv(int sockfd, void *__restrict buf, size_t len, int flags) {
-	return recvfrom(sockfd, buf, len, flags, NULL, NULL);
+	return recvfrom(sockfd, buf, len, flags, nullptr, nullptr);
 }
 
 ssize_t recvfrom(int sockfd, void *__restrict buf, size_t len, int flags,
@@ -183,8 +189,12 @@ int sendmmsg(int, struct mmsghdr *, unsigned int, int) {
 
 int setsockopt(int fd, int layer, int number,
 		const void *buffer, socklen_t size) {
-	MLIBC_CHECK_OR_ENOSYS(mlibc::sys_setsockopt, -1);
-	return mlibc::sys_setsockopt(fd, layer, number, buffer, size);
+	auto sysdep = MLIBC_CHECK_OR_ENOSYS(mlibc::sys_setsockopt, -1);
+	if (int e = sysdep(fd, layer, number, buffer, size); e) {
+		errno = e;
+		return -1;
+	}
+	return 0;
 }
 
 int shutdown(int sockfd, int how) {
@@ -197,9 +207,15 @@ int shutdown(int sockfd, int how) {
 	return 0;
 }
 
-int sockatmark(int) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+int sockatmark(int sockfd) {
+	auto sysdep = MLIBC_CHECK_OR_ENOSYS(mlibc::sys_sockatmark, -1);
+	int out = 0;
+	if(int e = sysdep(sockfd, &out); e) {
+		errno = e;
+		return -1;
+	}
+
+	return out;
 }
 
 int socket(int family, int type, int protocol) {

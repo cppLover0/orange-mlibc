@@ -49,6 +49,9 @@ ansi_sources = files(
 	'generic/complex/catanhf.c',
 	'generic/complex/ccosf.c',
 	'generic/complex/casinh.c',
+	'generic/complex/cabsl.c',
+	'generic/complex/cargl.c',
+	'generic/complex/clogl.c',
 
 	'generic/ctype.cpp',
 	'generic/environment.cpp',
@@ -96,6 +99,7 @@ if not no_headers
 		'include/bits/ansi/timespec.h',
 		'include/bits/ansi/time_t.h',
 		'include/bits/ansi/fenv.h',
+		'include/bits/ansi/clock_t.h',
 		subdir: 'bits/ansi'
 	)
 endif
@@ -325,5 +329,6 @@ if not headers_only
 		pic: true,
 		include_directories: libc_include_dirs,
 		dependencies: libc_deps,
-		c_args: [compiler_c_args, '-Wno-implicit', '-Wno-parentheses', '-Wno-sign-compare', '-Wno-attributes', '-Wno-unknown-pragmas'])
+		c_args: [mlibc_c_args, compiler_c_args, '-Wno-implicit', '-Wno-parentheses', '-Wno-sign-compare', '-Wno-attributes', '-Wno-unknown-pragmas'],
+		link_args: [mlibc_link_args])
 endif

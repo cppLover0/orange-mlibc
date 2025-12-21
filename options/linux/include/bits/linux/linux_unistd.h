@@ -5,12 +5,17 @@
 extern "C" {
 #endif
 
+#include <mlibc-config.h>
+
 #ifndef __MLIBC_ABI_ONLY
 
-int dup3(int __fd, int __newfd, int __flags);
+#if defined(_DEFAULT_SOURCE)
 int vhangup(void);
-int getdtablesize(void);
+#endif
+
+#if defined(_GNU_SOURCE)
 int syncfs(int __fd);
+#endif
 
 #endif /* !__MLIBC_ABI_ONLY */
 

@@ -3,6 +3,7 @@ rtld_test_cases = [
 	'dladdr_local',
 	'ld_library_path',
 	'noload-promote',
+	'promote-lib',
 	'rtld_next',
 	'soname',
 	'preinit',
@@ -17,6 +18,7 @@ rtld_test_cases = [
 	'tls_align',
 	'relr',
 	'symver',
+	'fail-load',
 ]
 
 if host_machine.cpu_family() != 'm68k'
@@ -52,8 +54,8 @@ foreach test_name : rtld_test_cases
 		exec = executable('rtld-' + test_name, ['skipped.c', test_sources],
 			dependencies: libc_dep,
 			override_options: test_override_options,
-			c_args: test_c_args,
-			link_args: test_link_args,
+			c_args: mlibc_c_args + test_c_args,
+			link_args: mlibc_link_args + test_link_args,
 		)
 		test(test_name, exec, suite: 'rtld')
 		if build_tests_host_libc and not host_libc_excluded_test_cases.contains('rtld' / test_name)
@@ -67,8 +69,8 @@ foreach test_name : rtld_test_cases
 		dependencies: libc_dep,
 		build_rpath: test_rpath,
 		override_options: test_override_options,
-		c_args: test_c_args,
-		link_args: test_link_args + test_additional_link_args,
+		c_args: mlibc_c_args + test_c_args,
+		link_args: mlibc_link_args + test_link_args + test_additional_link_args,
 	)
 	args = [
 		meson.global_source_root() + '/tests/rtld/env.py',

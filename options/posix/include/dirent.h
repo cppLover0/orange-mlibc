@@ -2,8 +2,14 @@
 #ifndef _DIRENT_H
 #define _DIRENT_H
 
+#include <mlibc-config.h>
+
+#include <abi-bits/limits.h>
 #include <abi-bits/ino_t.h>
 #include <bits/off_t.h>
+#include <bits/size_t.h>
+#include <bits/ssize_t.h>
+#include <bits/reclen_t.h>
 #include <bits/types.h>
 
 #ifdef __cplusplus
@@ -20,25 +26,23 @@ extern "C" {
 #define DT_SOCK 12
 #define DT_WHT 14
 
+/* The character array d_name is of unspecified size, but the number of bytes preceding
+ * the terminating null byte will not exceed {NAME_MAX}. */
 #define __MLIBC_DIRENT_BODY ino_t d_ino; \
 			off_t d_off; \
-			unsigned short d_reclen; \
+			reclen_t d_reclen; \
 			unsigned char d_type; \
-			char d_name[1024];
+			char d_name[__MLIBC_NAME_MAX+1];
 
 struct dirent {
 	__MLIBC_DIRENT_BODY
 };
 
-struct dirent64 {
-	__MLIBC_DIRENT_BODY
-};
-
 #define d_fileno d_ino
 
-#undef __MLIBC_DIRENT_BODY
-
+#if defined(_DEFAULT_SOURCE)
 #define IFTODT(mode) (((mode) & 0170000) >> 12)
+#endif
 
 struct __mlibc_dir_struct {
 	int __handle;
@@ -58,14 +62,29 @@ int dirfd(DIR *__dirp);
 DIR *fdopendir(int __fd);
 DIR *opendir(const char *__pathname);
 struct dirent *readdir(DIR *__dirp);
-struct dirent64 *readdir64(DIR *__dirp);
 int readdir_r(DIR *__restrict __dirp, struct dirent *__restrict __entry, struct dirent **__restrict __res);
 void rewinddir(DIR *__dirp);
 int scandir(const char *__pathname, struct dirent ***__res, int (*__select)(const struct dirent *__entry),
 		int (*__compare)(const struct dirent **__a, const struct dirent **__b));
+
+#if __MLIBC_LINUX_OPTION && defined(_LARGEFILE64_SOURCE)
+struct dirent64 {
+	__MLIBC_DIRENT_BODY
+};
+
+struct dirent64 *readdir64(DIR *__dirp);
+#endif /* __MLIBC_LINUX_OPTION && defined(_LARGEFILE64_SOURCE) */
+
+#undef __MLIBC_DIRENT_BODY
+
+#if defined(_DEFAULT_SOURCE) || defined(_XOPEN_SOURCE)
 void seekdir(DIR *__dirp, long __loc);
 long telldir(DIR *__dirp);
+#endif
+
+#if __MLIBC_GLIBC_OPTION && defined(_GNU_SOURCE)
 int versionsort(const struct dirent **__a, const struct dirent **__b);
+#endif /* __MLIBC_GLIBC_OPTION && defined(_GNU_SOURCE) */
 
 #endif /* !__MLIBC_ABI_ONLY */
 

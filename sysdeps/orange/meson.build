@@ -18,6 +18,7 @@ libc_sources += files(
 
 if not no_headers
 	install_headers(
+		'include/abi-bits/access.h',
 		'include/abi-bits/auxv.h',
 		'include/abi-bits/seek-whence.h',
 		'include/abi-bits/vm-flags.h',
@@ -41,12 +42,9 @@ if not no_headers
 		'include/abi-bits/nlink_t.h',
 		'include/abi-bits/pid_t.h',
 		'include/abi-bits/uid_t.h',
-		'include/abi-bits/access.h',
 		'include/abi-bits/wait.h',
 		'include/abi-bits/limits.h',
 		'include/abi-bits/utsname.h',
-		'include/abi-bits/ptrace.h',
-		'include/abi-bits/vt.h',
 		'include/abi-bits/ptrace.h',
 		'include/abi-bits/poll.h',
 		'include/abi-bits/epoll.h',
@@ -65,17 +63,24 @@ if not no_headers
 		'include/abi-bits/ioctls.h',
 		'include/abi-bits/xattr.h',
 		'include/abi-bits/msg.h',
+		'include/abi-bits/vt.h',
 		'include/abi-bits/random.h',
 		'include/abi-bits/rlim_t.h',
 		'include/abi-bits/sigval.h',
 		'include/abi-bits/sigevent.h',
 		'include/abi-bits/utmpx.h',
 		'include/abi-bits/utmp-defines.h',
+		'include/abi-bits/fd_set.h',
+		'include/abi-bits/sem.h',
+		'include/abi-bits/route.h',
+		'include/abi-bits/sa_family_t.h',
+		'include/abi-bits/sockaddr_storage.h',
+		'include/abi-bits/sig-limits.h',
+		'include/abi-bits/sigset_t.h',
 		subdir: 'abi-bits',
-		follow_symlinks: true
+		follow_symlinks: true,
 	)
 endif
-
 if not headers_only
 	crt = custom_target('crt0',
 		build_by_default: true,

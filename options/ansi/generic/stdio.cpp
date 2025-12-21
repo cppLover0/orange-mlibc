@@ -8,6 +8,7 @@
 #include <wchar.h>
 #include <ctype.h>
 #include <limits.h>
+#include <math.h>
 
 #include <abi-bits/fcntl.h>
 
@@ -17,7 +18,9 @@
 #include <mlibc/allocator.hpp>
 #include <mlibc/debug.hpp>
 #include <mlibc/file-io.hpp>
+#include <mlibc/locale.hpp>
 #include <mlibc/ansi-sysdeps.hpp>
+#include <mlibc/stdlib.hpp>
 #include <frg/mutex.hpp>
 #include <frg/expected.hpp>
 #include <frg/printf.hpp>
@@ -25,7 +28,14 @@
 template<typename F>
 struct PrintfAgent {
 	PrintfAgent(F *formatter, frg::va_struct *vsp)
-	: _formatter{formatter}, _vsp{vsp} { }
+	: _formatter{formatter}, _vsp{vsp} {
+		auto l = mlibc::getActiveLocale();
+		locale_opts = frg::locale_options(
+			l->numeric.get(DECIMAL_POINT).asString().data(),
+			l->numeric.get(THOUSANDS_SEP).asString().data(),
+			reinterpret_cast<const char *>(l->numeric.get(GROUPING).asByteSpan().data())
+		);
+	}
 
 	frg::expected<frg::format_error> operator() (char c) {
 		_formatter->append(c);
@@ -42,7 +52,7 @@ struct PrintfAgent {
 		case 'c':
 			if (szmod == frg::printf_size_mod::long_size) {
 				char c_buf[MB_LEN_MAX];
-				auto c = static_cast<wchar_t>(va_arg(_vsp->args, wint_t));
+				auto c = static_cast<wchar_t>(frg::pop_arg<wint_t>(_vsp, &opts));
 				mbstate_t shift_state = {};
 				size_t res = wcrtomb(c_buf, c, &shift_state);
 				if (res == size_t(-1))
@@ -56,10 +66,10 @@ struct PrintfAgent {
 			frg::do_printf_chars(*_formatter, t, opts, szmod, _vsp);
 			break;
 		case 'd': case 'i': case 'o': case 'x': case 'X': case 'b': case 'B': case 'u':
-			frg::do_printf_ints(*_formatter, t, opts, szmod, _vsp);
+			frg::do_printf_ints(*_formatter, t, opts, szmod, _vsp, locale_opts);
 			break;
-		case 'f': case 'F': case 'g': case 'G': case 'e': case 'E':
-			frg::do_printf_floats(*_formatter, t, opts, szmod, _vsp);
+		case 'f': case 'F': case 'g': case 'G': case 'e': case 'E': case 'a': case 'A':
+			frg::do_printf_floats(*_formatter, t, opts, szmod, _vsp, locale_opts);
 			break;
 		case 'm':
 			__ensure(!opts.fill_zeros);
@@ -71,9 +81,40 @@ struct PrintfAgent {
 			_formatter->append(strerror(errno));
 			break;
 		case 'n': {
-			__ensure(szmod == frg::printf_size_mod::default_size);
-			auto p = va_arg(_vsp->args, int *);
-			*p = _formatter->count;
+			switch(szmod) {
+			case frg::printf_size_mod::default_size: {
+				auto p = frg::pop_arg<int *>(_vsp, &opts);
+				*p = _formatter->count;
+			} break;
+			case frg::printf_size_mod::char_size: {
+				auto p = frg::pop_arg<signed char *>(_vsp, &opts);
+				*p = static_cast<signed char>(_formatter->count);
+			} break;
+			case frg::printf_size_mod::short_size: {
+				auto p = frg::pop_arg<short *>(_vsp, &opts);
+				*p = static_cast<short>(_formatter->count);
+			} break;
+			case frg::printf_size_mod::long_size: {
+				auto p = frg::pop_arg<long *>(_vsp, &opts);
+				*p = static_cast<long>(_formatter->count);
+			} break;
+			case frg::printf_size_mod::longlong_size: {
+				auto p = frg::pop_arg<long long *>(_vsp, &opts);
+				*p = static_cast<long long>(_formatter->count);
+			} break;
+			case frg::printf_size_mod::longdouble_size:
+				__ensure(!"Illegal size for %n printf modifier");
+				break;
+			case frg::printf_size_mod::native_size: {
+				auto p = frg::pop_arg<ptrdiff_t *>(_vsp, &opts);
+				*p = static_cast<ptrdiff_t>(_formatter->count);
+			} break;
+			case frg::printf_size_mod::intmax_size: {
+				auto p = frg::pop_arg<intmax_t *>(_vsp, &opts);
+				*p = static_cast<intmax_t>(_formatter->count);
+			} break;
+			}
+
 			break;
 		}
 		default:
@@ -85,8 +126,30 @@ struct PrintfAgent {
 		return {};
 	}
 
+	std::optional<frg::printf_arg_type> format_type(char t, frg::printf_size_mod sz) {
+		switch(t) {
+			case 'c':
+				if (sz == frg::printf_size_mod::long_size)
+					return frg::printf_arg_type::WCHAR;
+				else
+					return frg::printf_arg_type::CHAR;
+			case 's': case 'n':
+				return frg::printf_arg_type::POINTER;
+			case 'f': case 'F': case 'g': case 'G': case 'e': case 'E': case 'a': case 'A':
+				return frg::printf_arg_type::DOUBLE;
+			case 'd': case 'i': case 'b': case 'B': case 'o': case 'x': case 'X': case 'u':
+				return frg::printf_arg_type::INT;
+			default:
+				_formatter->append("unknown format '");
+				_formatter->append(t);
+				_formatter->append('\'');
+				return std::nullopt;
+		}
+	}
+
 private:
 	F *_formatter;
+	frg::locale_options locale_opts;
 	frg::va_struct *_vsp;
 };
 
@@ -244,13 +307,44 @@ int renameat(int olddirfd, const char *old_path, int newdirfd, const char *new_p
 }
 
 FILE *tmpfile(void) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+	MLIBC_CHECK_OR_ENOSYS(mlibc::sys_unlinkat, nullptr);
+
+	int fd = 0;
+	char pattern[] = "/tmp/tmpfile_XXXXXX";
+	int res = mlibc::mkostemps(pattern, 0, 0, &fd);
+	if (res)
+		return nullptr;
+
+	res = mlibc::sys_unlinkat(AT_FDCWD, pattern, 0);
+	if (res) {
+		mlibc::sys_close(fd);
+		errno = res;
+		return nullptr;
+	}
+
+	return frg::construct<mlibc::fd_file>(getAllocator(), fd, mlibc::file_dispose_cb<mlibc::fd_file>);
+
 }
 
-char *tmpnam(char *) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+char *tmpnam(char *buf) {
+	static thread_local char internalBuffer[L_tmpnam];
+	char *result = buf ? buf : internalBuffer;
+
+	for (size_t i = 0; i < 100; i++) {
+		int ret = snprintf(result, L_tmpnam, "/tmp/tmpnam_%06X", rand() & 0xFFFFFF);
+		if (ret < 18)
+			return nullptr;
+
+		int fd;
+		ret = mlibc::sys_open(result, O_RDONLY, 0666, &fd);
+		if (ret == 0) {
+			mlibc::sys_close(fd);
+		} else {
+			return result;
+		}
+	}
+
+	return nullptr;
 }
 
 // fflush() is provided by the POSIX sublibrary
@@ -273,7 +367,7 @@ void setbuf(FILE *__restrict stream, char *__restrict buffer) {
 // setvbuf() is provided by the POSIX sublibrary
 
 void setlinebuf(FILE *stream) {
-	setvbuf(stream, NULL, _IOLBF, 0);
+	setvbuf(stream, nullptr, _IOLBF, 0);
 }
 
 void setbuffer(FILE *f, char *buf, size_t size) {
@@ -305,19 +399,19 @@ int printf(const char *__restrict format, ...) {
 }
 
 namespace {
-	enum {
-		SCANF_TYPE_CHAR,
-		SCANF_TYPE_SHORT,
-		SCANF_TYPE_INTMAX,
-		SCANF_TYPE_L,
-		SCANF_TYPE_LL,
-		SCANF_TYPE_PTRDIFF,
-		SCANF_TYPE_SIZE_T,
-		SCANF_TYPE_INT
-	};
-}
 
-static void store_int(void *dest, unsigned int size, unsigned long long i) {
+	enum {
+	SCANF_TYPE_CHAR,
+	SCANF_TYPE_SHORT,
+	SCANF_TYPE_INTMAX,
+	SCANF_TYPE_L,
+	SCANF_TYPE_LL,
+	SCANF_TYPE_PTRDIFF,
+	SCANF_TYPE_SIZE_T,
+	SCANF_TYPE_INT
+};
+
+void store_int(void *dest, unsigned int size, unsigned long long i) {
 	switch (size) {
 		case SCANF_TYPE_CHAR:
 			*(char *)dest = i;
@@ -348,8 +442,22 @@ static void store_int(void *dest, unsigned int size, unsigned long long i) {
 	}
 }
 
+void store_float(void *dest, unsigned int size, long double f) {
+	switch (size) {
+		case SCANF_TYPE_LL:
+			*(long double *)dest = f;
+			break;
+		case SCANF_TYPE_L:
+			*(double *)dest = f;
+			break;
+		default:
+			*(float *)dest = f;
+			break;
+	}
+}
+
 template<typename H>
-static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
+int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 	#define NOMATCH_CHECK(cond) ({ if(cond) return match_count; }) // if cond is true, matching error
 	#define EOF_CHECK(cond) ({ if(cond) return match_count ? match_count : EOF; }) // if cond is true, no more data to read
 	int match_count = 0;
@@ -370,7 +478,7 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 			continue;
 		}
 
-		void *dest = NULL;
+		void *dest = nullptr;
 		/* %n$ format */
 		if (isdigit(*fmt) && fmt[1] == '$') {
 			/* TODO: dest = get_arg_at_pos(args, *fmt -'0'); */
@@ -384,17 +492,31 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 
 		bool allocate_buf = false;
 		auto temp_dest = frg::string<MemoryAllocator>{getAllocator()};
+		auto temp_wdest = frg::basic_string<wchar_t, MemoryAllocator>{getAllocator()};
 		int count = 0;
 
 		const auto append_to_buffer = [&](char c) {
 			if(allocate_buf) {
 				temp_dest += c;
-				count++;
 			} else {
 				char *typed_dest = (char *)dest;
 				if(typed_dest)
-					typed_dest[count++] = c;
+					typed_dest[count] = c;
 			}
+
+			count++;
+		};
+
+		const auto append_to_wbuffer = [&](wchar_t c) {
+			if(allocate_buf) {
+				temp_wdest += c;
+			} else {
+				wchar_t *typed_dest = (wchar_t *)dest;
+				if(typed_dest)
+					typed_dest[count] = c;
+			}
+
+			count++;
 		};
 
 		int width = 0;
@@ -486,16 +608,21 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 				char c = handler.look_ahead();
 				EOF_CHECK(c == '\0');
 
-				if((*fmt == 'i' || *fmt == 'd') && c == '-') {
+				if(c == '-') {
 					handler.consume();
 					is_negative = true;
-				}
+				} else if(c == '+')
+					handler.consume();
 
 				if(*fmt == 'i' && handler.look_ahead() == '0') {
 					handler.consume();
-					if(handler.look_ahead() == 'x') {
+					c = handler.look_ahead();
+					if(tolower(c) == 'x') {
 						handler.consume();
 						base = 16;
+					} else if(tolower(c) == 'b') {
+						handler.consume();
+						base = 2;
 					} else {
 						base = 8;
 					}
@@ -537,9 +664,18 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 							res = res * 8 + (c - '0');
 							c = handler.look_ahead();
 						}
-						break;
 						// no need for a match check, the starting 0 was already consumed
+						break;
+					case 2:
+						NOMATCH_CHECK(c != '0' && c != '1');
+						while (c == '0' || c == '1') {
+							handler.consume();
+							res = res * 2 + (c - '0');
+							c = handler.look_ahead();
+						}
+						break;
 				}
+
 				if (dest) {
 					if(is_negative)
 						store_int(dest, type, -res);
@@ -549,29 +685,52 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 				break;
 			}
 			case 'o': {
+				bool is_negative = false;
 				unsigned long long res = 0;
 				char c = handler.look_ahead();
 				EOF_CHECK(c == '\0');
+
+				if(c == '-') {
+					handler.consume();
+					is_negative = true;
+				} else if(c == '+')
+					handler.consume();
+
+				c = handler.look_ahead();
 				NOMATCH_CHECK(!(c >= '0' && c <= '7'));
 				while (c >= '0' && c <= '7') {
 					handler.consume();
 					res = res * 8 + (c - '0');
 					c = handler.look_ahead();
 				}
-				if (dest)
-					store_int(dest, type, res);
+
+				if (dest) {
+					if(is_negative)
+						store_int(dest, type, -res);
+					else
+						store_int(dest, type, res);
+				}
 				break;
 			}
 			case 'x':
 			case 'X': {
+				bool is_negative = false;
 				unsigned long long res = 0;
 				char c = handler.look_ahead();
 				int count = 0;
 				EOF_CHECK(c == '\0');
+
+				if(c == '-') {
+					handler.consume();
+					is_negative = true;
+				} else if(c == '+')
+					handler.consume();
+
+				c = handler.look_ahead();
 				if (c == '0') {
 					handler.consume();
 					c = handler.look_ahead();
-					if (c == 'x') {
+					if (tolower(c) == 'x') {
 						handler.consume();
 						c = handler.look_ahead();
 					}
@@ -593,19 +752,32 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 					c = handler.look_ahead();
 				}
 				NOMATCH_CHECK(count == 0);
-				if (dest)
-					store_int(dest, type, res);
+
+				if (dest) {
+					if(is_negative)
+						store_int(dest, type, -res);
+					else
+						store_int(dest, type, res);
+				}
 				break;
 			}
 			case 'b': {
+				bool is_negative = false;
 				unsigned long long res = 0;
 				char c = handler.look_ahead();
 				int count = 0;
 				EOF_CHECK(c == '\0');
+
+				if(c == '-') {
+					handler.consume();
+					is_negative = true;
+				} else if(c == '+')
+					handler.consume();
+
 				if (c == '0') {
 					handler.consume();
 					c = handler.look_ahead();
-					if (c == 'b' || c == 'B') {
+					if (tolower(c) == 'b') {
 						handler.consume();
 						c = handler.look_ahead();
 					}
@@ -621,8 +793,13 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 					c = handler.look_ahead();
 				}
 				NOMATCH_CHECK(count == 0);
-				if (dest)
-					store_int(dest, type, res);
+
+				if (dest) {
+					if(is_negative)
+						store_int(dest, type, -res);
+					else
+						store_int(dest, type, res);
+				}
 				break;
 			}
 			case 's': {
@@ -630,13 +807,23 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 				EOF_CHECK(c == '\0');
 				while (c && !isspace(c)) {
 					handler.consume();
-					append_to_buffer(c);
+
+					if(type == SCANF_TYPE_L)
+						append_to_wbuffer(c);
+					else
+						append_to_buffer(c);
+
 					c = handler.look_ahead();
 					if (width && count >= width)
 						break;
 				}
 				NOMATCH_CHECK(count == 0);
-				append_to_buffer('\0');
+
+				if(type == SCANF_TYPE_L)
+					append_to_wbuffer(L'\0');
+				else
+					append_to_buffer('\0');
+
 				break;
 			}
 			case 'c': {
@@ -646,9 +833,13 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 					width = 1;
 				while (c && count < width) {
 					handler.consume();
-					append_to_buffer(c);
+
+					if(type == SCANF_TYPE_L)
+						append_to_wbuffer(c);
+					else
+						append_to_buffer(c);
+
 					c = handler.look_ahead();
-					count++;
 				}
 				break;
 			}
@@ -673,26 +864,40 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 				}
 
 				for (; *fmt != ']'; fmt++) {
+					auto fmt_unsigned = reinterpret_cast<const unsigned char *>(fmt);
+
 					if (!*fmt) return EOF;
-					if (*fmt == '-' && *fmt != ']') {
+					if (*fmt == '-' && *(fmt + 1) != ']') {
 						fmt++;
-						for (char c = *(fmt - 2); c < *fmt; c++)
+						fmt_unsigned++;
+						for (unsigned char c = *(fmt_unsigned - 2); c < *fmt_unsigned; c++)
 							scanset[1 + c] = 1 - invert;
 					}
-					scanset[1 + *fmt] = 1 - invert;
+					scanset[1 + *fmt_unsigned] = 1 - invert;
 				}
 
 				char c = handler.look_ahead();
 				EOF_CHECK(c == '\0');
 				while (c && (!width || count < width)) {
-					handler.consume();
-					if (!scanset[1 + c])
+					unsigned char uc = static_cast<unsigned char>(c);
+					if (!scanset[1 + uc])
 						break;
-					append_to_buffer(c);
+					handler.consume();
+
+					if(type == SCANF_TYPE_L)
+						append_to_wbuffer(c);
+					else
+						append_to_buffer(c);
+
 					c = handler.look_ahead();
 				}
 				NOMATCH_CHECK(count == 0);
-				append_to_buffer('\0');
+
+				if(type == SCANF_TYPE_L)
+					append_to_wbuffer(L'\0');
+				else
+					append_to_buffer('\0');
+
 				break;
 			}
 			case 'p': {
@@ -704,7 +909,7 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 				if (c == '0') {
 					handler.consume();
 					c = handler.look_ahead();
-					if (c == 'x') {
+					if (tolower(c) == 'x') {
 						handler.consume();
 						c = handler.look_ahead();
 					}
@@ -716,10 +921,10 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 						res = res * 16 + (c - '0');
 					} else if (c >= 'a' && c <= 'f') {
 						handler.consume();
-						res = res * 16 + (c - 'a');
+						res = res * 16 + (c - 'a' + 10);
 					} else if (c >= 'A' && c <= 'F') {
 						handler.consume();
-						res = res * 16 + (c - 'A');
+						res = res * 16 + (c - 'A' + 10);
 					} else {
 						break;
 					}
@@ -732,26 +937,220 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 				break;
 			}
 			case 'n': {
-				int *typed_dest = (int *)dest;
-				if (typed_dest)
-					*typed_dest = handler.num_consumed;
+				if(dest) {
+					switch(type) {
+					case SCANF_TYPE_CHAR:
+						*(signed char *)dest = (signed char)handler.num_consumed;
+						break;
+					case SCANF_TYPE_SHORT:
+						*(short *)dest = (short)handler.num_consumed;
+						break;
+					case SCANF_TYPE_INTMAX:
+						*(intmax_t *)dest = (intmax_t)handler.num_consumed;
+						break;
+					case SCANF_TYPE_L:
+						*(long *)dest = (long)handler.num_consumed;
+						break;
+					case SCANF_TYPE_LL:
+						*(long long *)dest = (long long)handler.num_consumed;
+						break;
+					case SCANF_TYPE_PTRDIFF:
+						*(ptrdiff_t *)dest = (ptrdiff_t)handler.num_consumed;
+						break;
+					case SCANF_TYPE_SIZE_T:
+						*(size_t *)dest = (size_t)handler.num_consumed;
+						break;
+					case SCANF_TYPE_INT:
+						*(int *)dest = (int)handler.num_consumed;
+						break;
+					}
+				}
+
 				continue;
+			}
+			case 'a':
+			case 'A':
+			case 'e':
+			case 'E':
+			case 'f':
+			case 'F':
+			case 'g':
+			case 'G': {
+				bool is_negative = false;
+				long double divisor = 10;
+				long double result = 0;
+				int base = 10;
+				int count = 0;
+				bool dot = false; // set to true once a decimal point has been hit
+				char c = handler.look_ahead();
+				EOF_CHECK(c == '\0');
+
+				if (c == '-' || c == '+') {
+					handler.consume();
+					is_negative = c == '-';
+					c = handler.look_ahead();
+				}
+
+				// nan?
+				if (tolower(c) == 'n') {
+					handler.consume();
+					c = handler.look_ahead();
+					if (tolower(c) != 'a')
+						return match_count;
+
+					handler.consume();
+					c = handler.look_ahead();
+					if (tolower(c) != 'n')
+						return match_count;
+
+					handler.consume();
+					if (dest)
+						store_float(dest, type, NAN);
+
+					break;
+				}
+
+				// inf?
+				if (tolower(c) == 'i') {
+					handler.consume();
+					c = handler.look_ahead();
+					size_t i = 0;
+					for (; i < strlen("nfinity"); i++) {
+						if (tolower(c) != "nfinity"[i])
+							break;
+						handler.consume();
+						c = handler.look_ahead();
+					}
+
+					NOMATCH_CHECK(i != 2 && i != 7);
+
+					if (dest)
+						store_float(dest, type, is_negative ? -INFINITY : INFINITY);
+
+					break;
+				}
+
+				if (c == '0') {
+					handler.consume();
+					c = handler.look_ahead();
+
+					if (c == 'x' || c == 'X') {
+						divisor = 16;
+						base = 16;
+						handler.consume();
+						c = handler.look_ahead();
+					}
+				}
+
+				while ((base == 16 ? isxdigit(c) : isdigit(c)) || (dot == false && c == '.')) {
+					handler.consume();
+					if (c == '.') {
+						dot = true;
+						c = handler.look_ahead();
+						continue;
+					}
+
+					long double character_value;
+					if (base == 10 || (c >= '0' && c <= '9'))
+						character_value = c - '0';
+					else if (base == 16 && tolower(c) >= 'a' && tolower(c) <= 'f')
+						character_value = tolower(c) - 'a' + 10;
+					else
+						break;
+
+					if (dot) {
+						result = result + character_value / divisor;
+						divisor *= base;
+					} else {
+						result = result * base + character_value;
+					}
+
+					++count;
+					c = handler.look_ahead();
+				}
+
+				NOMATCH_CHECK(count == 0);
+
+				if (c == 'e' || c == 'E') {
+					handler.consume();
+					c = handler.look_ahead();
+
+					bool exp_negative = false;
+
+					if (c == '-' || c == '+') {
+						handler.consume();
+						exp_negative = c == '-';
+						c = handler.look_ahead();
+					}
+
+					int exp = 0;
+
+					while (isdigit(c)) {
+						handler.consume();
+						exp = exp * 10 + (c - '0');
+						c = handler.look_ahead();
+					}
+
+					if (exp_negative)
+						exp = -exp;
+
+					result *= pow(10.0, exp);
+				} else if (c == 'p' || c == 'P') {
+					handler.consume();
+					c = handler.look_ahead();
+
+					bool exp_negative = false;
+
+					if (c == '-' || c == '+') {
+						handler.consume();
+						exp_negative = c == '-';
+						c = handler.look_ahead();
+					}
+
+					int exp = 0;
+
+					while (isdigit(c)) {
+						handler.consume();
+						exp = exp * 10 + (c - '0');
+						c = handler.look_ahead();
+					}
+
+					if (exp_negative)
+						exp = -exp;
+
+					result *= pow(2.0, exp);
+				}
+
+				if (dest)
+					store_float(dest, type, is_negative ? -result : result);
+				break;
 			}
 		}
 
 		if(allocate_buf && dest) {
-			char *temp = (char *)getAllocator().allocate(temp_dest.size() + 1);
-			memcpy(temp, temp_dest.data(), temp_dest.size());
-			temp[temp_dest.size()] = '\0';
+			if(type == SCANF_TYPE_L) {
+				wchar_t *temp = (wchar_t *)getAllocator().allocate((temp_wdest.size() + 1) * sizeof(wchar_t));
+				memcpy(temp, temp_wdest.data(), temp_wdest.size() * sizeof(wchar_t));
+				temp[temp_wdest.size()] = L'\0';
 
-			char **dest_ptr = (char **)dest;
-			*dest_ptr = temp;
+				wchar_t **dest_ptr = (wchar_t **)dest;
+				*dest_ptr = temp;
+			} else {
+				char *temp = (char *)getAllocator().allocate(temp_dest.size() + 1);
+				memcpy(temp, temp_dest.data(), temp_dest.size());
+				temp[temp_dest.size()] = '\0';
+
+				char **dest_ptr = (char **)dest;
+				*dest_ptr = temp;
+			}
 		}
 
 		if (dest) match_count++;
 	}
 	return match_count;
 }
+
+} // namespace
 
 int scanf(const char *__restrict format, ...) {
 	va_list args;
@@ -796,9 +1195,11 @@ int vfprintf(FILE *__restrict stream, const char *__restrict format, __builtin_v
 	frg::unique_lock lock(file->_lock);
 	StreamPrinter p{stream};
 //	mlibc::infoLogger() << "printf(" << format << ")" << frg::endlog;
-	auto res = frg::printf_format(PrintfAgent{&p, &vs}, format, &vs);
-	if (!res)
-		return -static_cast<int>(res.error());
+	auto res = frg::printf_format<NL_ARGMAX>(PrintfAgent{&p, &vs}, format, &vs);
+	if (!res) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	return p.count;
 }
@@ -837,9 +1238,8 @@ int vprintf(const char *__restrict format, __builtin_va_list args){
 	return vfprintf(stdout, format, args);
 }
 
-int vscanf(const char *__restrict, __builtin_va_list) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+int vscanf(const char *__restrict format, __builtin_va_list args) {
+	return vfscanf(stdin, format, args);
 }
 
 int vsnprintf(char *__restrict buffer, size_t max_size,
@@ -850,9 +1250,11 @@ int vsnprintf(char *__restrict buffer, size_t max_size,
 	va_copy(vs.args, args);
 	LimitedPrinter p{buffer, max_size ? max_size - 1 : 0};
 //	mlibc::infoLogger() << "printf(" << format << ")" << frg::endlog;
-	auto res = frg::printf_format(PrintfAgent{&p, &vs}, format, &vs);
-	if (!res)
-		return -static_cast<int>(res.error());
+	auto res = frg::printf_format<NL_ARGMAX>(PrintfAgent{&p, &vs}, format, &vs);
+	if (!res) {
+		errno = EINVAL;
+		return -1;
+	}
 	if (max_size)
 		p.buffer[frg::min(max_size - 1, p.count)] = 0;
 	return p.count;
@@ -865,9 +1267,11 @@ int vsprintf(char *__restrict buffer, const char *__restrict format, __builtin_v
 	va_copy(vs.args, args);
 	BufferPrinter p(buffer);
 //	mlibc::infoLogger() << "printf(" << format << ")" << frg::endlog;
-	auto res = frg::printf_format(PrintfAgent{&p, &vs}, format, &vs);
-	if (!res)
-		return -static_cast<int>(res.error());
+	auto res = frg::printf_format<NL_ARGMAX>(PrintfAgent{&p, &vs}, format, &vs);
+	if (!res) {
+		errno = EINVAL;
+		return -1;
+	}
 	p.buffer[p.count] = 0;
 	return p.count;
 }
@@ -1165,9 +1569,11 @@ int vasprintf(char **out, const char *format, __builtin_va_list args) {
 	va_copy(vs.args, args);
 	ResizePrinter p;
 //	mlibc::infoLogger() << "printf(" << format << ")" << frg::endlog;
-	auto res = frg::printf_format(PrintfAgent{&p, &vs}, format, &vs);
-	if (!res)
-		return -static_cast<int>(res.error());
+	auto res = frg::printf_format<NL_ARGMAX>(PrintfAgent{&p, &vs}, format, &vs);
+	if (!res) {
+		errno = EINVAL;
+		return -1;
+	}
 	p.expand();
 	p.buffer[p.count] = 0;
 	*out = p.buffer;

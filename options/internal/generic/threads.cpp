@@ -1,15 +1,73 @@
 #include <abi-bits/errno.h>
 #include <bits/threads.h>
 #include <bits/ensure.h>
+#include <frg/allocation.hpp>
+#include <frg/mutex.hpp>
 #include <mlibc/all-sysdeps.hpp>
+#include <mlibc/allocator.hpp>
 #include <mlibc/debug.hpp>
 #include <mlibc/lock.hpp>
 #include <mlibc/threads.hpp>
 #include <mlibc/tcb.hpp>
+#include <mlibc/time-helpers.hpp>
 
 extern "C" Tcb *__rtld_allocateTcb();
 
+namespace {
+
+struct key_global_info {
+	bool in_use;
+
+	void (*dtor)(void *);
+	uint64_t generation;
+};
+
+constinit frg::array<
+	key_global_info,
+	PTHREAD_KEYS_MAX
+> key_globals_{};
+
+FutexLock key_mutex_;
+
+} // namespace
+
 namespace mlibc {
+
+static constexpr unsigned int onceComplete = 1;
+static constexpr unsigned int onceLocked = 2;
+
+int thread_once(__mlibc_once *once, void (*func) (void)) {
+	auto expected = __atomic_load_n(&once->__mlibc_done, __ATOMIC_ACQUIRE);
+
+	// fast path: the function was already run.
+	while(!(expected & onceComplete)) {
+		if(!expected) {
+			// try to acquire the mutex.
+			if(!__atomic_compare_exchange_n(&once->__mlibc_done,
+					&expected, onceLocked, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE))
+				continue;
+
+			func();
+
+			// unlock the mutex.
+			__atomic_exchange_n(&once->__mlibc_done, onceComplete, __ATOMIC_RELEASE);
+			if(int e = mlibc::sys_futex_wake((int *)&once->__mlibc_done); e)
+				__ensure(!"sys_futex_wake() failed");
+			return 0;
+		}else{
+			// a different thread is currently running the initializer.
+			__ensure(expected == onceLocked);
+			// if the wait gets interrupted by a signal, check again.
+			// EAGAIN will also be a retry, as it means the other thread completed
+			// and changed the __mlibc_done variable to signal it before we actually went to sleep.
+			if(int e = mlibc::sys_futex_wait((int *)&once->__mlibc_done, onceLocked, nullptr); e && e != EINTR && e != EAGAIN)
+				__ensure(!"sys_futex_wait() failed");
+			expected =  __atomic_load_n(&once->__mlibc_done, __ATOMIC_ACQUIRE);
+		}
+	}
+
+	return 0;
+}
 
 int thread_create(struct __mlibc_thread_data **__restrict thread, const struct __mlibc_threadattr *__restrict attrp, void *entry, void *__restrict user_arg, bool returns_int) {
 	auto new_tcb = __rtld_allocateTcb();
@@ -80,6 +138,73 @@ int thread_join(struct __mlibc_thread_data *thread, void *ret) {
 	return 0;
 }
 
+int thread_detach(struct __mlibc_thread_data *thread) {
+	auto tcb = reinterpret_cast<Tcb *>(thread);
+	if (!__atomic_load_n(&tcb->isJoinable, __ATOMIC_RELAXED))
+		return EINVAL;
+
+	int expected = 1;
+	if(!__atomic_compare_exchange_n(&tcb->isJoinable, &expected, 0, false, __ATOMIC_RELEASE,
+				__ATOMIC_RELAXED))
+		return EINVAL;
+
+	return 0;
+}
+
+namespace {
+
+__attribute__ ((__noreturn__)) void do_exit() {
+	sys_thread_exit();
+	__builtin_unreachable();
+}
+
+} // namespace
+
+__attribute__ ((__noreturn__)) void thread_exit(thread_exit_return ret_val) {
+	auto self = get_current_tcb();
+
+	if (__atomic_load_n(&self->cancelBits, __ATOMIC_RELAXED) & tcbExitingBit)
+		mlibc::do_exit();
+
+	__atomic_fetch_or(&self->cancelBits, tcbExitingBit, __ATOMIC_RELAXED);
+
+	auto hand = self->cleanupEnd;
+	while (hand) {
+		auto old = hand;
+		hand->func(hand->arg);
+		hand = hand->prev;
+		frg::destruct(getAllocator(), old);
+	}
+
+	for (size_t j = 0; j < __MLIBC_THREAD_DESTRUCTOR_ITERATIONS; j++) {
+		for (size_t i = 0; i < PTHREAD_KEYS_MAX; i++) {
+			if (auto v = thread_key_get(i)) {
+				key_mutex_.lock();
+				auto dtor = key_globals_[i].dtor;
+				key_mutex_.unlock();
+
+				if (dtor) {
+					dtor(v);
+					(*self->localKeys)[i].value = nullptr;
+				}
+			}
+		}
+	}
+
+	if(self->returnValueType == TcbThreadReturnValue::Pointer)
+		self->returnValue.voidPtr = ret_val.voidPtr;
+	else if(self->returnValueType == TcbThreadReturnValue::Integer)
+		self->returnValue.intVal = ret_val.integer;
+
+	__atomic_store_n(&self->didExit, 1, __ATOMIC_RELEASE);
+	sys_futex_wake(&self->didExit);
+
+	// TODO: clean up thread resources when we are detached.
+
+	// TODO: do exit(0) when we're the only thread instead
+	mlibc::do_exit();
+}
+
 static constexpr size_t default_stacksize = 0x200000;
 static constexpr size_t default_guardsize = 4096;
 
@@ -131,7 +256,7 @@ int thread_mutex_destroy(struct __mlibc_mutex *mutex) {
 	return 0;
 }
 
-int thread_mutex_lock(struct __mlibc_mutex *mutex) {
+int thread_mutex_timedlock(struct __mlibc_mutex *mutex, const struct timespec *__restrict abstime, clockid_t clockid) {
 	unsigned int this_tid = mlibc::this_tid();
 	unsigned int expected = 0;
 	while(true) {
@@ -147,19 +272,34 @@ int thread_mutex_lock(struct __mlibc_mutex *mutex) {
 			// If this (recursive) mutex is already owned by us, increment the recursion level.
 			if((expected & mutex_owner_mask) == this_tid) {
 				if(!(mutex->__mlibc_flags & mutexRecursive)) {
-					if (mutex->__mlibc_flags & mutexErrorCheck)
+					if (!abstime)
 						return EDEADLK;
-					else
-						mlibc::panicLogger() << "mlibc: pthread_mutex deadlock detected!"
-							<< frg::endlog;
+				} else {
+					++mutex->__mlibc_recursion;
+					return 0;
 				}
-				++mutex->__mlibc_recursion;
-				return 0;
 			}
 
 			// Wait on the futex if the waiters flag is set.
 			if(expected & mutex_waiters_bit) {
-				int e = mlibc::sys_futex_wait((int *)&mutex->__mlibc_state, expected, nullptr);
+				int e;
+				if (abstime) {
+					// Adjust for the fact that sys_futex_wait accepts a *timeout*, but
+					// we accept an *absolute time*.
+					struct timespec timeout;
+					if (!mlibc::time_absolute_to_relative(clockid, abstime, &timeout))
+						return EINVAL;
+
+					if (timeout.tv_sec == 0 && timeout.tv_nsec == 0)
+						return ETIMEDOUT;
+
+					e = mlibc::sys_futex_wait((int *)&mutex->__mlibc_state, expected, &timeout);
+
+					if (e == ETIMEDOUT)
+						return e;
+				} else {
+					e = mlibc::sys_futex_wait((int *)&mutex->__mlibc_state, expected, nullptr);
+				}
 
 				// If the wait returns EAGAIN, that means that the mutex_waiters_bit was just unset by
 				// some other thread. In this case, we should loop back around.
@@ -178,6 +318,35 @@ int thread_mutex_lock(struct __mlibc_mutex *mutex) {
 			}
 		}
 	}
+}
+
+int thread_mutex_lock(struct __mlibc_mutex *mutex) {
+	return thread_mutex_timedlock(mutex, nullptr, 0);
+}
+
+int thread_mutex_trylock(struct __mlibc_mutex *mutex) {
+	unsigned int this_tid = mlibc::this_tid();
+	unsigned int expected = __atomic_load_n(&mutex->__mlibc_state, __ATOMIC_RELAXED);
+	if(!expected) {
+		// Try to take the mutex here.
+		if(__atomic_compare_exchange_n(&mutex->__mlibc_state,
+						&expected, this_tid, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) {
+			__ensure(!mutex->__mlibc_recursion);
+			mutex->__mlibc_recursion = 1;
+			return 0;
+		}
+	} else {
+		// If this (recursive) mutex is already owned by us, increment the recursion level.
+		if((expected & mutex_owner_mask) == this_tid) {
+			if(!(mutex->__mlibc_flags & mutexRecursive)) {
+				return EBUSY;
+			}
+			++mutex->__mlibc_recursion;
+			return 0;
+		}
+	}
+
+	return EBUSY;
 }
 
 int thread_mutex_unlock(struct __mlibc_mutex *mutex) {
@@ -265,7 +434,7 @@ int thread_cond_broadcast(struct __mlibc_cond *cond) {
 }
 
 int thread_cond_timedwait(struct __mlibc_cond *__restrict cond, __mlibc_mutex *__restrict mutex,
-		const struct timespec *__restrict abstime) {
+		const struct timespec *__restrict abstime, clockid_t clockid) {
 	// TODO: pshared isn't supported yet.
 	__ensure(cond->__mlibc_flags == 0);
 
@@ -284,28 +453,15 @@ int thread_cond_timedwait(struct __mlibc_cond *__restrict cond, __mlibc_mutex *_
 		if (abstime) {
 			// Adjust for the fact that sys_futex_wait accepts a *timeout*, but
 			// pthread_cond_timedwait accepts an *absolute time*.
-			// Note: mlibc::sys_clock_get is available unconditionally.
-			struct timespec now;
-			if (mlibc::sys_clock_get(cond->__mlibc_clock, &now.tv_sec, &now.tv_nsec))
-				__ensure(!"sys_clock_get() failed");
-
 			struct timespec timeout;
-			timeout.tv_sec = abstime->tv_sec - now.tv_sec;
-			timeout.tv_nsec = abstime->tv_nsec - now.tv_nsec;
-
-			// Check if abstime has already passed.
-			if (timeout.tv_sec < 0 || (timeout.tv_sec == 0 && timeout.tv_nsec < 0)) {
+			if (!mlibc::time_absolute_to_relative(clockid, abstime, &timeout)) {
+				if (thread_mutex_lock(mutex))
+					__ensure(!"Failed to lock the mutex");
+				return EINVAL;
+			} else if (timeout.tv_sec == 0 && timeout.tv_nsec == 0) {
 				if (thread_mutex_lock(mutex))
 					__ensure(!"Failed to lock the mutex");
 				return ETIMEDOUT;
-			} else if (timeout.tv_nsec >= nanos_per_second) {
-				timeout.tv_nsec -= nanos_per_second;
-				timeout.tv_sec++;
-				__ensure(timeout.tv_nsec < nanos_per_second);
-			} else if (timeout.tv_nsec < 0) {
-				timeout.tv_nsec += nanos_per_second;
-				timeout.tv_sec--;
-				__ensure(timeout.tv_nsec >= 0);
 			}
 
 			e = mlibc::sys_futex_wait((int *)&cond->__mlibc_seq, seq, &timeout);
@@ -341,6 +497,69 @@ int thread_cond_timedwait(struct __mlibc_cond *__restrict cond, __mlibc_mutex *_
 			mlibc::panicLogger() << "sys_futex_wait() failed with error " << e << frg::endlog;
 		}
 	}
+}
+
+int thread_key_create(__mlibc_uintptr *out, void (*destructor)(void *)) {
+	auto g = frg::guard(&key_mutex_);
+
+	__mlibc_uintptr key = PTHREAD_KEYS_MAX;
+	for (size_t i = 0; i < PTHREAD_KEYS_MAX; i++) {
+		if (!key_globals_[i].in_use) {
+			key = i;
+			break;
+		}
+	}
+
+	if (key == PTHREAD_KEYS_MAX)
+		return EAGAIN;
+
+	key_globals_[key].in_use = true;
+	key_globals_[key].dtor = destructor;
+
+	*out = key;
+
+	return 0;
+}
+
+int thread_key_delete(__mlibc_uintptr key) {
+	auto g = frg::guard(&key_mutex_);
+
+	if (key >= PTHREAD_KEYS_MAX || !key_globals_[key].in_use)
+		return EINVAL;
+
+	key_globals_[key].in_use = false;
+	key_globals_[key].dtor = nullptr;
+	key_globals_[key].generation++;
+
+	return 0;
+}
+
+void *thread_key_get(__mlibc_uintptr key) {
+	auto self = mlibc::get_current_tcb();
+	auto g = frg::guard(&key_mutex_);
+
+	if (key >= PTHREAD_KEYS_MAX || !key_globals_[key].in_use)
+		return nullptr;
+
+	if (key_globals_[key].generation > (*self->localKeys)[key].generation) {
+		(*self->localKeys)[key].value = nullptr;
+		(*self->localKeys)[key].generation = key_globals_[key].generation;
+	}
+
+	return (*self->localKeys)[key].value;
+}
+
+int thread_key_set(__mlibc_uintptr key, const void *value) {
+	auto self = mlibc::get_current_tcb();
+	auto g = frg::guard(&key_mutex_);
+
+	if (key >= PTHREAD_KEYS_MAX || !key_globals_[key].in_use)
+		return EINVAL;
+
+	(*self->localKeys)[key].value = const_cast<void *>(value);
+	(*self->localKeys)[key].generation = key_globals_[key].generation;
+
+	return 0;
 }
 
 } // namespace mlibc

@@ -1,13 +1,21 @@
 
-#ifndef MLIBC_TIMESPEC_H
-#define MLIBC_TIMESPEC_H
+#ifndef _MLIBC_ANSI_TIMESPEC_H
+#define _MLIBC_ANSI_TIMESPEC_H
 
 #include <bits/ansi/time_t.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct timespec {
 	time_t tv_sec;
 	long tv_nsec;
 };
 
-#endif /* MLIBC_TIMESPEC_H */
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _MLIBC_ANSI_TIMESPEC_H */
 

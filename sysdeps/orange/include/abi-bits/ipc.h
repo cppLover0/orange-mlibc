@@ -1,1 +1,1 @@
-../../../../abis/linux/ipc.h
+../../../../abis/astral/ipc.h

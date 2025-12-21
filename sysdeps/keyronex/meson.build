@@ -72,6 +72,13 @@ if not no_headers
 		'include/abi-bits/sigevent.h',
 		'include/abi-bits/utmpx.h',
 		'include/abi-bits/utmp-defines.h',
+		'include/abi-bits/fd_set.h',
+		'include/abi-bits/sem.h',
+		'include/abi-bits/route.h',
+		'include/abi-bits/sa_family_t.h',
+		'include/abi-bits/sockaddr_storage.h',
+		'include/abi-bits/sig-limits.h',
+		'include/abi-bits/sigset_t.h',
 		subdir: 'abi-bits',
 		follow_symlinks: true
 	)

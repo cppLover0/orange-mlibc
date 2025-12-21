@@ -73,17 +73,39 @@ if not no_headers
 		'include/abi-bits/sigevent.h',
 		'include/abi-bits/utmpx.h',
 		'include/abi-bits/utmp-defines.h',
+		'include/abi-bits/fd_set.h',
+		'include/abi-bits/sem.h',
+		'include/abi-bits/route.h',
+		'include/abi-bits/sa_family_t.h',
+		'include/abi-bits/sockaddr_storage.h',
+		'include/abi-bits/sig-limits.h',
+		'include/abi-bits/sigset_t.h',
 		subdir: 'abi-bits',
 		follow_symlinks: true,
 	)
+        install_headers(
+                'include/astral/syscall.h',
+                'include/astral/archctl.h',
+                subdir: 'astral',
+                follow_symlinks: true,
+        )
 endif
 
 if not headers_only
-	crt = custom_target('crt0',
+	crt = custom_target('crt1',
 		build_by_default: true,
 		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
-		input: 'crt-x86_64/crt0.S',
-		output: 'crt0.o',
+		input: 'crt-x86_64/crt1.S',
+		output: 'crt1.o',
+		install: true,
+		install_dir: get_option('libdir')
+	)
+
+        crt_pie = custom_target('Scrt1',
+		build_by_default: true,
+		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
+		input: 'crt-x86_64/crt1.S',
+		output: 'Scrt1.o',
 		install: true,
 		install_dir: get_option('libdir')
 	)

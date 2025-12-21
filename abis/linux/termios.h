@@ -138,18 +138,8 @@ struct termios {
 	tcflag_t c_lflag;
 	cc_t c_line;
 	cc_t c_cc[NCCS];
-	speed_t ibaud;
-	speed_t obaud;
-};
-
-#define NCC 8
-struct termio {
-	unsigned short c_iflag;
-	unsigned short c_oflag;
-	unsigned short c_cflag;
-	unsigned short c_lflag;
-	unsigned char c_line;
-	unsigned char c_cc[NCC];
+	speed_t c_ibaud;
+	speed_t c_obaud;
 };
 
 #endif

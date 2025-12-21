@@ -136,9 +136,22 @@ char *strcasestr(const char *s, const char *pattern) {
 	return nullptr;
 }
 
-void *memccpy(void *__restrict, const void *__restrict, int, size_t) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+void *memccpy(void *__restrict dest, const void *__restrict src, int c, size_t n) {
+	auto *d = static_cast<unsigned char *>(dest);
+	const auto *s = static_cast<const unsigned char *>(src);
+	const unsigned char target = static_cast<unsigned char>(c);
+
+	for (size_t i = 0; i < n; i++) {
+		*d = *s;
+
+		if (*d == target)
+			return static_cast<void *>(d + 1);
+
+		d++;
+		s++;
+	}
+
+	return nullptr;
 }
 
 // This implementation was taken from musl
@@ -149,12 +162,33 @@ void *memrchr(const void *m, int c, size_t n) {
 		if(s[n] == c)
 			return (void *)(s + n);
 	}
-	return 0;
+	return nullptr;
 }
 
 char *strerror_l(int errnum, locale_t) {
 	mlibc::infoLogger() << "mlibc: strerror_l locale is ignored!" << frg::endlog;
 	return strerror(errnum);
+}
+
+void *memmem(const void *hs, size_t haystackLen, const void *nd, size_t needleLen) {
+	const char *haystack = static_cast<const char *>(hs);
+	const char *needle = static_cast<const char *>(nd);
+
+	for (size_t i = 0; i < haystackLen; i++) {
+		bool found = true;
+
+		for (size_t j = 0; j < needleLen; j++) {
+			if (i + j >= haystackLen || haystack[i + j] != needle[j]) {
+				found = false;
+				break;
+			}
+		}
+
+		if(found)
+			return const_cast<char *>(&haystack[i]);
+	}
+
+	return nullptr;
 }
 
 // BSD extensions.

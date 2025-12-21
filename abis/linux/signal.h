@@ -1,19 +1,24 @@
 #ifndef _ABIBITS_SIGNAL_H
 #define _ABIBITS_SIGNAL_H
 
-#include <stdint.h>
-#include <time.h>
-#include <abi-bits/sigevent.h>
-#include <abi-bits/pid_t.h>
-#include <abi-bits/uid_t.h>
-#include <bits/size_t.h>
+#include <mlibc-config.h>
 
+#include <abi-bits/pid_t.h>
+#include <abi-bits/sigevent.h>
+#include <abi-bits/sigset_t.h>
+#include <abi-bits/uid_t.h>
+#include <bits/ansi/clock_t.h>
+#include <bits/size_t.h>
+#include <bits/types.h>
+
+#if defined(_DEFAULT_SOURCE) || (__MLIBC_POSIX1 && !__MLIBC_POSIX2024)
 #define POLL_IN 1
 #define POLL_OUT 2
 #define POLL_MSG 3
 #define POLL_ERR 4
 #define POLL_PRI 5
 #define POLL_HUP 6
+#endif
 
 /* struct taken from musl. */
 
@@ -93,6 +98,11 @@ typedef struct {
 #define SA_RESETHAND 0x80000000
 #define SA_RESTORER 0x04000000
 
+/* SA_NOMASK is an alias for SA_NODEFER */
+/* SA_ONESHOT is an alias for SA_RESETHAND */
+#define SA_NOMASK SA_NODEFER
+#define SA_ONESHOT SA_RESETHAND
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -115,10 +125,6 @@ typedef void (*__sighandler) (int);
 #define SIGPWR 30
 #define SIGRTMIN 35
 #define SIGRTMAX 64
-
-typedef struct {
-	unsigned long sig[1024 / (8 * sizeof(long))];
-} sigset_t;
 
 /* constants for sigprocmask() */
 #define SIG_BLOCK 0
@@ -153,10 +159,12 @@ typedef struct {
 #define SIGCANCEL 32
 #define SIGTIMER  33
 
+#if __MLIBC_XOPEN
 #define MINSIGSTKSZ 2048
 #define SIGSTKSZ 8192
 #define SS_ONSTACK 1
 #define SS_DISABLE 2
+#endif
 
 typedef struct __stack {
 	void *ss_sp;
@@ -189,7 +197,10 @@ typedef struct __stack {
 #define ILL_BADSTK 8
 #define ILL_BADIADDR 9
 
-#define NSIG 65
+#define _NSIG 65
+#if defined(_DEFAULT_SOURCE)
+#define NSIG _NSIG
+#endif
 
 #define SI_ASYNCNL (-60)
 #define SI_TKILL (-6)
@@ -201,28 +212,32 @@ typedef struct __stack {
 #define SI_USER 0
 #define SI_KERNEL 128
 
-#if defined(__i386__)
-#define REG_GS 0
-#define REG_FS 1
-#define REG_ES 2
-#define REG_DS 3
-#define REG_EDI 4
-#define REG_ESI 5
-#define REG_EBP 6
-#define REG_ESP 7
-#define REG_EBX 8
-#define REG_EDX 9
-#define REG_ECX 10
-#define REG_EAX 11
-#define REG_TRAPNO 12
-#define REG_ERR 13
-#define REG_EIP 14
-#define REG_CS 15
-#define REG_EFL 16
-#define REG_UESP 17
-#define REG_SS 18
-#define NGREG 19
-#elif defined(__x86_64__)
+#include <bits/threads.h>
+
+struct sigaction {
+	union {
+		void (*sa_handler)(int);
+		void (*sa_sigaction)(int, siginfo_t *, void *);
+	} __sa_handler;
+	unsigned long sa_flags;
+	void (*sa_restorer)(void);
+	sigset_t sa_mask;
+};
+
+#define sa_handler __sa_handler.sa_handler
+#define sa_sigaction __sa_handler.sa_sigaction
+
+/* Taken from the linux kernel headers */
+
+#if defined(__x86_64__)
+
+#ifdef _DEFAULT_SOURCE
+#	define __pollution(n) n
+#else
+#	define __pollution(n) __ ## n
+#endif
+
+#if defined(_GNU_SOURCE)
 #define REG_R8 0
 #define REG_R9 1
 #define REG_R10 2
@@ -246,27 +261,86 @@ typedef struct __stack {
 #define REG_TRAPNO 20
 #define REG_OLDMASK 21
 #define REG_CR2 22
-#define NGREG 23
 #endif
 
-#include <bits/threads.h>
+#define __NGREG 23
+#if defined(_DEFAULT_SOURCE)
+#define NGREG __NREG
+#endif
 
-struct sigaction {
-	union {
-		void (*sa_handler)(int);
-		void (*sa_sigaction)(int, siginfo_t *, void *);
-	} __sa_handler;
-	unsigned long sa_flags;
-	void (*sa_restorer)(void);
-	sigset_t sa_mask;
+struct _fpxreg {
+	unsigned short __pollution(significand)[4];
+	unsigned short __pollution(exponent);
+	unsigned short __padding[3];
 };
 
-#define sa_handler __sa_handler.sa_handler
-#define sa_sigaction __sa_handler.sa_sigaction
+struct _xmmreg {
+	__mlibc_uint32 __pollution(element)[4];
+};
 
-/* Taken from the linux kernel headers */
+struct _fpstate {
+	__mlibc_uint16 __pollution(cwd);
+	__mlibc_uint16 __pollution(swd);
+	__mlibc_uint16 __pollution(ftw);
+	__mlibc_uint16 __pollution(fop);
+	__mlibc_uint64 __pollution(rip);
+	__mlibc_uint64 __pollution(rdp);
+	__mlibc_uint32 __pollution(mxcsr);
+	__mlibc_uint32 __pollution(mxcr_mask);
+	struct _fpxreg _st[8];
+	struct _xmmreg _xmm[16];
+	__mlibc_uint32 __padding[24];
+};
 
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(_DEFAULT_SOURCE)
+struct sigcontext {
+	unsigned long r8, r9, r10, r11, r12, r13, r14, r15;
+	unsigned long rdi, rsi, rbp, rbx, rdx, rax, rcx, rsp, rip, eflags;
+	unsigned short cs, gs, fs, ss;
+	unsigned long err, trapno, oldmask, cr2;
+	struct _fpstate *fpstate;
+	unsigned long __reserved1[8];
+};
+#endif
+
+typedef struct {
+	unsigned long __pollution(gregs)[__NGREG];
+	struct _fpstate *__pollution(fpregs);
+	unsigned long __reserved1[8];
+} mcontext_t;
+
+typedef struct __ucontext {
+	unsigned long __pollution(uc_flags);
+	struct __ucontext *uc_link;
+	stack_t uc_stack;
+	mcontext_t uc_mcontext;
+	sigset_t uc_sigmask;
+	struct _fpstate __fpregs_mem;
+	unsigned long __ssp[4];
+} ucontext_t;
+
+#elif defined(__i386__)
+
+#define REG_GS 0
+#define REG_FS 1
+#define REG_ES 2
+#define REG_DS 3
+#define REG_EDI 4
+#define REG_ESI 5
+#define REG_EBP 6
+#define REG_ESP 7
+#define REG_EBX 8
+#define REG_EDX 9
+#define REG_ECX 10
+#define REG_EAX 11
+#define REG_TRAPNO 12
+#define REG_ERR 13
+#define REG_EIP 14
+#define REG_CS 15
+#define REG_EFL 16
+#define REG_UESP 17
+#define REG_SS 18
+#define NGREG 19
 
 struct _fpreg {
 	unsigned short significand[4];
@@ -280,55 +354,34 @@ struct _fpxreg {
 };
 
 struct _xmmreg {
-	uint32_t element[4];
+	__mlibc_uint32 element[4];
 };
 
 struct _fpstate {
-#if defined(__x86_64__)
-	uint16_t cwd;
-	uint16_t swd;
-	uint16_t ftw;
-	uint16_t fop;
-	uint64_t rip;
-	uint64_t rdp;
-	uint32_t mxcsr;
-	uint32_t mxcr_mask;
-	struct _fpxreg _st[8];
-	struct _xmmreg _xmm[16];
-	uint32_t padding[24];
-#elif defined(__i386__)
-	uint32_t cw;
-	uint32_t sw;
-	uint32_t tag;
-	uint32_t ipoff;
-	uint32_t cssel;
-	uint32_t dataoff;
-	uint32_t datasel;
+	__mlibc_uint32 cw;
+	__mlibc_uint32 sw;
+	__mlibc_uint32 tag;
+	__mlibc_uint32 ipoff;
+	__mlibc_uint32 cssel;
+	__mlibc_uint32 dataoff;
+	__mlibc_uint32 datasel;
 	struct _fpreg _st[8];
-	uint16_t status;
-	uint16_t magic;
+	__mlibc_uint16 status;
+	__mlibc_uint16 magic;
 
 	/* FXSR FPU */
 
-	uint32_t _fxsr_env[6];
-	uint32_t mxscr;
-	uint32_t reserved;
+	__mlibc_uint32 _fxsr_env[6];
+	__mlibc_uint32 mxscr;
+	__mlibc_uint32 reserved;
 	struct _fpxreg _fxsr_st[8];
 	struct _xmmreg _xmm[8];
 
-	uint32_t padding2[56];
-#endif
+	__mlibc_uint32 padding2[56];
 };
 
+#if defined(_DEFAULT_SOURCE)
 struct sigcontext {
-#if defined(__x86_64__)
-	unsigned long r8, r9, r10, r11, r12, r13, r14, r15;
-	unsigned long rdi, rsi, rbp, rbx, rdx, rax, rcx, rsp, rip, eflags;
-	unsigned short cs, gs, fs, __pad0;
-	unsigned long err, trapno, oldmask, cr2;
-	struct _fpstate *fpstate;
-	unsigned long __reserved1[8];
-#elif defined(__i386__)
 	unsigned short gs, __gsh, fs, __fsh, es, __esh, ds, __dsh;
 	unsigned long edi, esi, ebp, esp, ebx, edx, ecx, eax;
 	unsigned long trapno, err, eip;
@@ -337,14 +390,27 @@ struct sigcontext {
 	unsigned short ss, __ssh;
 	struct _fpstate *fpstate;
 	unsigned long oldmask, cr2;
-#endif
 };
+#endif
 
 typedef struct {
-	unsigned long gregs[NGREG];
+	int gregs[NGREG];
 	struct _fpstate *fpregs;
-	unsigned long __reserved1[8];
+	unsigned long oldmask;
+	unsigned long cr2;
 } mcontext_t;
+
+struct _libc_fpstate {
+	__mlibc_uint32 cw;
+	__mlibc_uint32 sw;
+	__mlibc_uint32 tag;
+	__mlibc_uint32 ipoff;
+	__mlibc_uint32 cssel;
+	__mlibc_uint32 dataoff;
+	__mlibc_uint32 datasel;
+	struct _fpreg _st[8];
+	__mlibc_uint32 status;
+};
 
 typedef struct __ucontext {
 	unsigned long uc_flags;
@@ -352,6 +418,8 @@ typedef struct __ucontext {
 	stack_t uc_stack;
 	mcontext_t uc_mcontext;
 	sigset_t uc_sigmask;
+	struct _libc_fpstate __fpregs_mem;
+	unsigned long __ssp[4];
 } ucontext_t;
 
 #elif defined(__riscv) && __riscv_xlen == 64
@@ -375,19 +443,19 @@ enum {
 };
 
 struct __riscv_f_ext_state {
-	uint32_t f[32];
-	uint32_t fcsr;
+	__mlibc_uint32 f[32];
+	__mlibc_uint32 fcsr;
 };
 
 struct __riscv_d_ext_state {
-	uint64_t f[32];
-	uint32_t fcsr;
+	__mlibc_uint64 f[32];
+	__mlibc_uint32 fcsr;
 };
 
 struct __riscv_q_ext_state {
-	uint64_t f[64] __attribute__((__aligned__(16)));
-	uint32_t fcsr;
-	uint32_t reserved[3];
+	__mlibc_uint64 f[64] __attribute__((__aligned__(16)));
+	__mlibc_uint32 fcsr;
+	__mlibc_uint32 reserved[3];
 };
 
 union __riscv_fp_state {
@@ -405,12 +473,12 @@ typedef struct sigcontext {
 
 typedef struct __ucontext {
 	unsigned long uc_flags;
-	struct ucontext	*uc_link;
+	struct __ucontext *uc_link;
 	stack_t uc_stack;
 	sigset_t uc_sigmask;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
-	uint8_t __unused[1024 / 8 - sizeof(sigset_t)];
+	__mlibc_uint8 __unused[1024 / 8 - sizeof(sigset_t)];
 #pragma GCC diagnostic pop
 	mcontext_t uc_mcontext;
 } ucontext_t;
@@ -420,12 +488,12 @@ typedef struct __ucontext {
 #define NGREG 34
 
 typedef struct sigcontext {
-	uint64_t fault_address;
-	uint64_t regs[31];
-	uint64_t sp;
-	uint64_t pc;
-	uint64_t pstate;
-	uint8_t __reserved[4096];
+	__mlibc_uint64 fault_address;
+	__mlibc_uint64 regs[31];
+	__mlibc_uint64 sp;
+	__mlibc_uint64 pc;
+	__mlibc_uint64 pstate;
+	__mlibc_uint8 __reserved[4096]  __attribute__ ((__aligned__ (16)));
 } mcontext_t;
 
 #define FPSIMD_MAGIC 0x46508001
@@ -433,29 +501,29 @@ typedef struct sigcontext {
 #define EXTRA_MAGIC 0x45585401
 #define SVE_MAGIC 0x53564501
 struct _aarch64_ctx {
-	uint32_t magic;
-	uint32_t size;
+	__mlibc_uint32 magic;
+	__mlibc_uint32 size;
 };
 struct fpsimd_context {
 	struct _aarch64_ctx head;
-	uint32_t fpsr;
-	uint32_t fpcr;
+	__mlibc_uint32 fpsr;
+	__mlibc_uint32 fpcr;
 	__uint128_t vregs[32];
 };
 struct esr_context {
 	struct _aarch64_ctx head;
-	uint64_t esr;
+	__mlibc_uint64 esr;
 };
 struct extra_context {
 	struct _aarch64_ctx head;
-	uint64_t datap;
-	uint32_t size;
-	uint32_t __reserved[3];
+	__mlibc_uint64 datap;
+	__mlibc_uint32 size;
+	__mlibc_uint32 __reserved[3];
 };
 struct sve_context {
 	struct _aarch64_ctx head;
-	uint16_t vl;
-	uint16_t __reserved[3];
+	__mlibc_uint16 vl;
+	__mlibc_uint16 __reserved[3];
 };
 #define SVE_VQ_BYTES		16
 #define SVE_VQ_MIN		1
@@ -606,14 +674,17 @@ struct sigcontext {
 	unsigned long sc_pc;
 	unsigned long sc_regs[32];
 	unsigned sc_flags;
-	unsigned long sc_extcontext[1] __attribute__((__aligned__(16)));
+	__extension__ unsigned long sc_extcontext[0] __attribute__((__aligned__(16)));
 };
 
 typedef struct {
 	unsigned long pc;
 	unsigned long gregs[32];
 	unsigned flags;
-	unsigned long extcontext[1] __attribute__((__aligned__(16)));
+/* this is just plain incompatible with pre-C99; hiding this does not change size or alignment */
+#if defined __STDC_VERSION__ && __STDC_VERSION__ >= 199901L
+	__extension__ unsigned long extcontext[0] __attribute__((__aligned__(16)));
+#endif
 } mcontext_t;
 
 struct sigaltstack {
@@ -628,7 +699,7 @@ typedef struct __ucontext {
 	stack_t uc_stack;
 	sigset_t uc_sigmask;
 	long __uc_pad;
-	mcontext_t uc_mcontext;
+	__extension__ mcontext_t uc_mcontext;
 } ucontext_t;
 
 #else

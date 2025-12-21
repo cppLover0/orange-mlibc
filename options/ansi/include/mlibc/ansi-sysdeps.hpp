@@ -10,6 +10,7 @@
 #include <bits/off_t.h>
 #include <bits/ssize_t.h>
 #include <bits/ansi/time_t.h>
+#include <bits/ansi/timespec.h>
 #include <signal.h>
 #include <stdarg.h>
 
@@ -63,6 +64,7 @@ int sys_clock_get(int clock, time_t *secs, long *nanos);
 [[gnu::weak]] int sys_fork(pid_t *child);
 [[gnu::weak]] int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru, pid_t *ret_pid);
 [[gnu::weak]] int sys_execve(const char *path, char *const argv[], char *const envp[]);
+[[gnu::weak]] void sys_yield();
 
 [[gnu::weak]] pid_t sys_getpid();
 [[gnu::weak]] int sys_kill(int, int);

@@ -3,7 +3,6 @@
 #include <string.h>
 #include <errno.h>
 #include <wchar.h>
-#include <ctype.h>
 
 #include <bits/ensure.h>
 #include <mlibc/strtol.hpp>
@@ -288,7 +287,7 @@ int wcscmp(const wchar_t *l, const wchar_t *r) {
 
 int wcscoll(const wchar_t *, const wchar_t *) { MLIBC_STUB_BODY; }
 int wcsncmp(const wchar_t *, const wchar_t *, size_t) { MLIBC_STUB_BODY; }
-int wcsxfrm(wchar_t *__restrict, const wchar_t *__restrict, size_t) { MLIBC_STUB_BODY; }
+size_t wcsxfrm(wchar_t *__restrict, const wchar_t *__restrict, size_t) { MLIBC_STUB_BODY; }
 
 int wmemcmp(const wchar_t *a, const wchar_t *b, size_t size) {
 	for(size_t i = 0; i < size; i++) {
@@ -306,7 +305,7 @@ wchar_t *wcschr(const wchar_t *s, wchar_t c) {
 	if(!c)
 		return (wchar_t *)s + wcslen(s);
 	for(; *s && *s != c; s++);
-	return *s ? (wchar_t *)s : 0;
+	return *s ? (wchar_t *)s : nullptr;
 }
 
 size_t wcscspn(const wchar_t *, const wchar_t *) { MLIBC_STUB_BODY; }
@@ -315,7 +314,7 @@ wchar_t *wcspbrk(const wchar_t *, const wchar_t *) { MLIBC_STUB_BODY; }
 wchar_t *wcsrchr(const wchar_t *s, wchar_t c) {
 	const wchar_t *p;
 	for(p = s + wcslen(s); p >= s && *p != c; p--);
-	return p >= s ? (wchar_t *)p : 0;
+	return p >= s ? (wchar_t *)p : nullptr;
 }
 
 size_t wcsspn(const wchar_t *, const wchar_t *) { MLIBC_STUB_BODY; }
@@ -484,67 +483,4 @@ int strerror_r(int e, char *buffer, size_t bufsz) {
 	if(strlen(s) >= bufsz)
 		return ERANGE;
 	return 0;
-}
-
-void *mempcpy(void *dest, const void *src, size_t len) {
-	return (char *)memcpy(dest, src, len) + len;
-}
-
-// GNU extensions.
-// Taken from musl.
-int strverscmp(const char *l0, const char *r0) {
-	const unsigned char *l = (const unsigned char *)l0;
-	const unsigned char *r = (const unsigned char *)r0;
-	size_t i, dp, j;
-	int z = 1;
-
-	/* Find maximal matching prefix and track its maximal digit
-	 * suffix and whether those digits are all zeros. */
-	for(dp = i = 0; l[i] == r[i]; i++) {
-		int c = l[i];
-		if(!c)
-			return 0;
-		if(!isdigit(c))
-			dp = i + 1, z = 1;
-		else if(c != '0')
-			z = 0;
-	}
-
-	if(l[dp] != '0' && r[dp] != '0') {
-		/* If we're not looking at a digit sequence that began
-		 * with a zero, longest digit string is greater. */
-		for(j = i; isdigit(l[j]); j++) {
-			if(!isdigit(r[j]))
-				return 1;
-		}
-		if(isdigit(r[j]))
-			return -1;
-	} else if(z && dp < i && (isdigit(l[i]) || isdigit(r[i]))) {
-		/* Otherwise, if common prefix of digit sequence is
-		 * all zeros, digits order less than non-digits. */
-		return (unsigned char)(l[i] - '0') - (unsigned char)(r[i] - '0');
-	}
-
-	return l[i] - r[i];
-}
-
-void *memmem(const void *hs, size_t haystackLen, const void *nd, size_t needleLen) {
-	const char *haystack = static_cast<const char *>(hs);
-	const char *needle = static_cast<const char *>(nd);
-
-	for (size_t i = 0; i < haystackLen; i++) {
-		bool found = true;
-
-		for (size_t j = 0; j < needleLen; j++) {
-			if (i + j >= haystackLen || haystack[i + j] != needle[j]) {
-				found = false;
-				break;
-			}
-		}
-
-		if(found)
-			return const_cast<char *>(&haystack[i]);
-	}
-
-	return nullptr;
 }

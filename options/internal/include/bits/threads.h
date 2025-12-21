@@ -1,5 +1,5 @@
-#ifndef _INTERNAL_THREADS_H
-#define _INTERNAL_THREADS_H
+#ifndef _MLIBC_INTERNAL_THREADS_H
+#define _MLIBC_INTERNAL_THREADS_H
 
 #include <abi-bits/clockid_t.h>
 #include <bits/size_t.h>
@@ -29,8 +29,15 @@
 #define __MLIBC_THREAD_PRIO_INHERIT 1
 #define __MLIBC_THREAD_PRIO_PROTECT 2
 
-struct sched_param {
-	int sched_priority;
+#define __MLIBC_THREAD_MUTEX_INITIALIZER {0, 0, 0, 0}
+#define __MLIBC_THREAD_ONCE_INITIALIZER {0}
+
+#define __MLIBC_THREAD_DESTRUCTOR_ITERATIONS 8
+
+/* KEEP IN SYNC WITH `struct sched_param`! */
+struct __mlibc_sched_param {
+	int __sched_priority;
+	/* TODO: add missing [SS|TSP] fields */
 };
 
 struct __mlibc_thread_data;
@@ -42,7 +49,7 @@ struct __mlibc_threadattr {
 	int __mlibc_detachstate;
 	int __mlibc_scope;
 	int __mlibc_inheritsched;
-	struct sched_param __mlibc_schedparam;
+	struct __mlibc_sched_param __mlibc_schedparam;
 	int __mlibc_schedpolicy;
 	cpu_set_t *__mlibc_cpuset;
 	size_t __mlibc_cpusetsize;
@@ -76,4 +83,34 @@ struct __mlibc_condattr {
 	clockid_t __mlibc_clock;
 };
 
-#endif /* _INTERNAL_THREADS_H */
+struct __mlibc_barrier {
+	unsigned int __mlibc_waiting;
+	unsigned int __mlibc_inside;
+	unsigned int __mlibc_count;
+	unsigned int __mlibc_seq;
+	unsigned int __mlibc_flags;
+};
+
+struct  __mlibc_barrierattr_struct {
+	int __mlibc_pshared;
+};
+
+struct __mlibc_fair_rwlock {
+	unsigned int __mlibc_m; /* Mutex. */
+	unsigned int __mlibc_rc; /* Reader count (not reference count). */
+	unsigned int __mlibc_flags;
+};
+
+struct __mlibc_rwlockattr {
+	int __mlibc_pshared;
+};
+
+struct __mlibc_once {
+	unsigned int __mlibc_done;
+};
+
+struct __mlibc_spinlock {
+	unsigned int __lock;
+};
+
+#endif /* _MLIBC_INTERNAL_THREADS_H */

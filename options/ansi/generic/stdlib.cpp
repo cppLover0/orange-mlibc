@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <wchar.h>
 #include <setjmp.h>
 #include <limits.h>
 
 #include <frg/random.hpp>
+#include <frg/vector.hpp>
 #include <mlibc/debug.hpp>
 #include <bits/ensure.h>
 #include <bits/sigset_t.h>
@@ -20,6 +20,7 @@
 #include <mlibc/ansi-sysdeps.hpp>
 #include <mlibc/strtofp.hpp>
 #include <mlibc/strtol.hpp>
+#include <mlibc/threads.hpp>
 #include <mlibc/global-config.hpp>
 
 #if __MLIBC_POSIX_OPTION
@@ -35,10 +36,12 @@ namespace {
 	// The string functions mbstowcs() and wcstombs() do *not* have this state.
 	thread_local __mlibc_mbstate mblen_state = __MLIBC_MBSTATE_INITIALIZER;
 	thread_local __mlibc_mbstate mbtowc_state = __MLIBC_MBSTATE_INITIALIZER;
-}
+
+	__mlibc_mutex exit_mutex = __MLIBC_THREAD_MUTEX_INITIALIZER;
+} // namespace
 
 double atof(const char *string) {
-	return strtod(string, NULL);
+	return strtod(string, nullptr);
 }
 int atoi(const char *string) {
 	return strtol(string, nullptr, 10);
@@ -54,30 +57,31 @@ long long atoll(const char *string) {
 // to avoid exporting sigprocmask when posix is disabled.
 int sigprocmask(int, const sigset_t *__restrict, sigset_t *__restrict);
 extern "C" {
-	__attribute__((__returns_twice__)) int __sigsetjmp(sigjmp_buf buffer, int savesigs) {
+	[[gnu::visibility("hidden")]]
+	int __sigsetjmp(sigjmp_buf buffer, int savesigs) {
 		buffer[0].__savesigs = savesigs;
 		if (savesigs)
-			sigprocmask(0, NULL, &buffer[0].__sigset);
+			sigprocmask(0, nullptr, &buffer[0].__sigset);
 		return 0;
 	}
 }
 
 __attribute__((__noreturn__)) void siglongjmp(sigjmp_buf buffer, int value) {
 	if (buffer[0].__savesigs)
-		sigprocmask(SIG_SETMASK, &buffer[0].__sigset, NULL);
+		sigprocmask(SIG_SETMASK, &buffer[0].__sigset, nullptr);
 	jmp_buf b;
 	b[0].__reg_state = buffer[0].__reg_state;
 	longjmp(b, value);
 }
 
 double strtod(const char *__restrict string, char **__restrict end) {
-	return mlibc::strtofp<double>(string, end);
+	return mlibc::strtofp<double>(string, end, mlibc::getActiveLocale());
 }
 float strtof(const char *__restrict string, char **__restrict end) {
-	return mlibc::strtofp<float>(string, end);
+	return mlibc::strtofp<float>(string, end, mlibc::getActiveLocale());
 }
 long double strtold(const char *__restrict string, char **__restrict end) {
-	return mlibc::strtofp<long double>(string, end);
+	return mlibc::strtofp<long double>(string, end, mlibc::getActiveLocale());
 }
 
 long strtol(const char *__restrict string, char **__restrict end, int base) {
@@ -142,7 +146,7 @@ void *calloc(size_t count, size_t size) {
 	// to prevent overflowing, we divide both sides of the inequality by size and check with that
 	if(size && count > (SIZE_MAX / size)) {
 		errno = EINVAL;
-		return NULL;
+		return nullptr;
 	}
 
 	// TODO: this could be done more efficient if the OS gives us already zero'd pages
@@ -193,13 +197,27 @@ int atexit(void (*func)(void)) {
 	__cxa_atexit((void (*) (void *))func, nullptr, nullptr);
 	return 0;
 }
+
+namespace {
+
+frg::vector<void (*)(void), MemoryAllocator> quickExitQueue{getAllocator()};
+__mlibc_mutex quickExitQueueMutex = __MLIBC_THREAD_MUTEX_INITIALIZER;
+
+} // namespace
+
 int at_quick_exit(void (*func)(void)) {
-	(void)func;
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+	mlibc::thread_mutex_lock(&quickExitQueueMutex);
+	quickExitQueue.push(func);
+	mlibc::thread_mutex_unlock(&quickExitQueueMutex);
+
+	return 0;
 }
 
 void exit(int status) {
+	// for concurrent calls to exit() or quick_exit(), all but the first shall block until termination
+	// see https://austingroupbugs.net/view.php?id=1845
+	mlibc::thread_mutex_lock(&exit_mutex);
+
 	__mlibc_do_finalize();
 	mlibc::sys_exit(status);
 }
@@ -209,9 +227,15 @@ void _Exit(int status) {
 }
 
 // getenv() is provided by POSIX
-void quick_exit(int) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+void quick_exit(int status) {
+	mlibc::thread_mutex_lock(&quickExitQueueMutex);
+
+	while (!quickExitQueue.empty()) {
+		auto func = quickExitQueue.pop();
+		func();
+	}
+
+	mlibc::sys_exit(status);
 }
 
 extern char **environ;
@@ -261,7 +285,7 @@ int system(const char *command) {
 		int err;
 		pid_t unused;
 
-		while ((err = mlibc::sys_waitpid(child, &status, 0, NULL, &unused)) < 0) {
+		while ((err = mlibc::sys_waitpid(child, &status, 0, nullptr, &unused)) < 0) {
 			if (err == EINTR)
 				continue;
 
@@ -433,9 +457,15 @@ int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
 	}
 }
 
-int wctomb(char *, wchar_t) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+int wctomb(char *s, wchar_t wc) {
+	static mbstate_t state;
+
+	if (s == nullptr) {
+		memset(&state, 0, sizeof(state));
+		return 0;
+	}
+
+    return wcrtomb(s, wc, &state);
 }
 
 size_t mbstowcs(wchar_t *__restrict wcs, const char *__restrict mbs, size_t wc_limit) {
@@ -452,8 +482,8 @@ size_t mbstowcs(wchar_t *__restrict wcs, const char *__restrict mbs, size_t wc_l
 	}
 
 	if(auto e = cc->decode_wtranscode(nseq, wseq, st); e != mlibc::charcode_error::null) {
-		__ensure(!"decode_wtranscode() errors are not handled");
-		__builtin_unreachable();
+		errno = EILSEQ;
+		return size_t(-1);
 	}else{
 		size_t n = wseq.it - wcs;
 		if(n < wc_limit) // Null-terminate resulting wide string.
@@ -464,7 +494,7 @@ size_t mbstowcs(wchar_t *__restrict wcs, const char *__restrict mbs, size_t wc_l
 
 size_t wcstombs(char *__restrict mb_string, const wchar_t *__restrict wc_string, size_t max_size) {
 	const wchar_t *wcs = wc_string;
-	return wcsrtombs(mb_string, &wcs, max_size, 0);
+	return wcsrtombs(mb_string, &wcs, max_size, nullptr);
 }
 
 void free(void *ptr) {

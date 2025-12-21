@@ -3,6 +3,7 @@
 
 #include <abi-bits/pid_t.h>
 #include <abi-bits/sigevent.h>
+#include <abi-bits/sigset_t.h>
 #include <abi-bits/uid_t.h>
 #include <bits/size_t.h>
 
@@ -52,7 +53,6 @@ typedef void (*__sighandler) (int);
 #define SIGPOLL   SIGIO
 #define SIGPROF   22
 #define SIGSYS    23
-#define SIGCANCEL SIGSYS
 #define SIGTRAP   24
 #define SIGURG    25
 #define SIGVTALRM 26
@@ -60,6 +60,13 @@ typedef void (*__sighandler) (int);
 #define SIGXFSZ   28
 #define SIGWINCH  29
 #define SIGPWR    30
+/* SIGRTMIN increased by one to leave space for SIGCANCEL */
+#define SIGRTMIN (31 + 1)
+#define SIGRTMAX  38
+
+#if __MLIBC_BUILDING_MLIBC
+#  define SIGCANCEL 31
+#endif
 
 /* siginfo->si_info constants */
 /* SIGBUS */
@@ -81,9 +88,6 @@ typedef void (*__sighandler) (int);
 /* SIGSEGV */
 #define SEGV_MAPERR 1
 #define SEGV_ACCERR 2
-
-/* TODO: replace this by uint64_t */
-typedef long sigset_t;
 
 #define SIGUNUSED SIGSYS
 
@@ -160,7 +164,6 @@ typedef struct {
 } mcontext_t;
 
 typedef struct __ucontext {
-	unsigned long uc_flags;
 	struct __ucontext *uc_link;
 	stack_t uc_stack;
 	mcontext_t uc_mcontext;

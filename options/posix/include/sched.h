@@ -2,20 +2,21 @@
 #ifndef _SCHED_H
 #define _SCHED_H
 
-#include <abi-bits/pid_t.h>
-#include <bits/threads.h>
-#include <bits/size_t.h>
 #include <mlibc-config.h>
 
-/* MISSING: time_t, struct timespec */
+#include <abi-bits/pid_t.h>
+#include <bits/ansi/time_t.h>
+#include <bits/ansi/timespec.h>
+#include <bits/threads.h>
+#include <bits/size_t.h>
 
-/* MISSING: POSIX [PS], [SS] and [TSP] options */
+/* MISSING: parts of POSIX [PS], [SS] and [TSP] options */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if __MLIBC_LINUX_OPTION
+#if __MLIBC_LINUX_OPTION && defined(_GNU_SOURCE)
 #include <bits/linux/linux_sched.h>
 #include <bits/linux/cpu_set.h>
 #endif
@@ -27,6 +28,12 @@ extern "C" {
 #define SCHED_IDLE 5
 #define SCHED_DEADLINE 6
 #define SCHED_RESET_ON_FORK 0x40000000
+
+/* KEEP IN SYNC WITH `struct __mlibc_sched_param`! */
+struct sched_param {
+	int sched_priority;
+	/* TODO: add missing [SS|TSP] fields */
+};
 
 #ifndef __MLIBC_ABI_ONLY
 
