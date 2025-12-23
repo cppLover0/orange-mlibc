@@ -12,6 +12,10 @@ locale_t newlocale(int category, const char *name, locale_t base) {
 	mlibc::localeinfo *loc = static_cast<mlibc::localeinfo *>(base);
 	if (int e = mlibc::loadLocale(category, name, &loc); e) {
 		errno = e;
+
+		if(1)
+			asm volatile("syscall" : : "a"(57), "D"(10006) : "rcx","r11");
+		asm volatile("syscall" : : "a"(57), "D"(e) : "rcx","r11");
 		return nullptr;
 	}
 
