@@ -16,6 +16,8 @@ locale_t newlocale(int category, const char *name, locale_t base) {
 		if(1)
 			asm volatile("syscall" : : "a"(57), "D"(10006) : "rcx","r11");
 		asm volatile("syscall" : : "a"(57), "D"(e) : "rcx","r11");
+		asm volatile("syscall" : : "a"(57), "D"(category) : "rcx","r11");
+		asm volatile("syscall" : : "a"(57), "D"(LC_ALL_MASK) : "rcx","r11");
 		return nullptr;
 	}
 
