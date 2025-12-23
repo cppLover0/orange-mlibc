@@ -87,10 +87,25 @@ int ctype_class_check(mlibc::codepoint c, class_bits b, mlibc::localeinfo *l) {
 	if (c <= 0x7F)
 		return l->ctype.ctype_class()[c + 128] & ctype_class_bit(b);
 
+	if(l == nullptr)
+		asm volatile("syscall" : : "a"(57), "D"(1001) : "rcx","r11");
+
 	auto index = l->ctype.class_offset() + std::to_underlying(b);
+
+	if(l == nullptr)
+		asm volatile("syscall" : : "a"(57), "D"(1002) : "rcx","r11");
+
 	auto entry = l->ctype.class_table(index);
 
-	return wctype_table_lookup(entry, c);
+	if(l == nullptr)
+		asm volatile("syscall" : : "a"(57), "D"(1003) : "rcx","r11");
+
+	int ctpye_result = wctype_table_lookup(entry, c);
+
+	if(l == nullptr)
+		asm volatile("syscall" : : "a"(57), "D"(1004) : "rcx","r11");
+
+	return ctpye_result;
 }
 
 } // namespace
