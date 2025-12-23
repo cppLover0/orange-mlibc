@@ -3,7 +3,7 @@ project(
 	default_options: [
 		'cpp_std=c++23',
 		'c_std=gnu11',
-		'buildtype=debug',
+		'buildtype=debugoptimized',
 		'warning_level=2',
 	],
 	meson_version: '>=1.3.0',
