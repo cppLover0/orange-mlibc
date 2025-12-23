@@ -5,20 +5,10 @@
 #include <mlibc/locale.hpp>
 
 locale_t newlocale(int category, const char *name, locale_t base) {
-
-	if(base == nullptr)
-		asm volatile("syscall" : : "a"(57), "D"(10005) : "rcx","r11");
 	
 	mlibc::localeinfo *loc = static_cast<mlibc::localeinfo *>(base);
 	if (int e = mlibc::loadLocale(category, name, &loc); e) {
 		errno = e;
-
-		if(1)
-			asm volatile("syscall" : : "a"(57), "D"(10006) : "rcx","r11");
-		asm volatile("syscall" : : "a"(57), "D"(e) : "rcx","r11");
-		asm volatile("syscall" : : "a"(57), "D"(category) : "rcx","r11");
-		asm volatile("syscall" : : "a"(57), "D"(LC_ALL_MASK) : "rcx","r11");
-		asm volatile("syscall" : : "a"(57), "D"(LC_ALL) : "rcx","r11");
 		return nullptr;
 	}
 
