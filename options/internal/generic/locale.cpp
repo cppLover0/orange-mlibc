@@ -669,7 +669,7 @@ bool applyCategory(int category, frg::string_view name, localeinfo *info) {
 // `name` can be a locale name or a composite.
 int loadLocale(int category_mask, frg::string_view name, localeinfo **base) {
 	if((category_mask & LC_ALL_MASK) != category_mask)
-		category_mask = LC_ALL_MASK;
+		return EINVAL;
 
 	if ((name == "POSIX" || name == "C") && category_mask == LC_ALL_MASK) {
 		*base = frg::construct<localeinfo>(getAllocator());
