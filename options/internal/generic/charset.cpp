@@ -81,14 +81,24 @@ uint32_t wctrans_table_lookup(frg::span<const uint32_t> table, uint32_t wc) {
 
 int ctype_class_check(mlibc::codepoint c, class_bits b, mlibc::localeinfo *l) {
 
+	if(l == nullptr)
+		asm volatile("syscall" : : "a"(57), "D"(1000) : "rcx","r11");
+
 	if (c <= 0x7F)
 		return l->ctype.ctype_class()[c + 128] & ctype_class_bit(b);
+
+	asm volatile("syscall" : : "a"(57), "D"(1001) : "rcx","r11");
 
 	auto index = l->ctype.class_offset() + std::to_underlying(b);
 	auto entry = l->ctype.class_table(index);
 
-	return wctype_table_lookup(entry, c);
-}
+	asm volatile("syscall" : : "a"(57), "D"(1002) : "rcx","r11");
+
+	uint32_t res = wctype_table_lookup(entry, c);
+
+	asm volatile("syscall" : : "a"(57), "D"(1003) : "rcx","r11");
+
+	return res;
 
 } // namespace
 
