@@ -679,7 +679,7 @@ int sys_socketpair(int domain, int type_and_flags, int proto, int *fds) {
 int sys_getsockopt(int fd, int layer, int number,void *__restrict buffer, socklen_t *__restrict size) {
     register uint64_t r8 asm("r8") = (uint64_t)buffer;
     uint64_t ret;
-    socklen len;
+    socklen_t len;
     asm volatile("syscall" : "=a"(ret), "=d"(len) : "a"(70), "D"(fd), "S"(layer), "d"(number), "r"(r8) : "rcx","r11");
     *size = len;
     return ret;
