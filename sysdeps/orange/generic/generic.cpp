@@ -253,7 +253,15 @@ gid_t sys_getegid() {
 }
 
 uid_t sys_getuid() {
-   return 0;
+   uid_t user;
+   asm volatile("syscall" : "=a"(user) : "a"(67) : "rcx","r11");
+   return user;
+}
+
+int sys_setuid(uid_t uid) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(68), "D"(uid) : "rcx","r11");
+    return ret;
 }
 
 uid_t sys_geteuid() {
