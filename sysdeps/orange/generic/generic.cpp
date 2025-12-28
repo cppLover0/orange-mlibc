@@ -658,7 +658,7 @@ int sys_rename(const char *path, const char *new_path) {
 int sys_socketpair(int domain, int type_and_flags, int proto, int *fds) {
     int fd0;
     int fd1;
-    asm volatile("syscall" : "=a"(fd0), "=d"(fd1) : "D"(domain), "S"(type_and_flags), "d"(proto) : "rcx","r11");
+    asm volatile("syscall" : "=a"(fd0), "=d"(fd1) : "a"(66), "D"(domain), "S"(type_and_flags), "d"(proto) : "rcx","r11");
     fds[0] = fd0;
     fds[1] = fd1;
     return 0;
