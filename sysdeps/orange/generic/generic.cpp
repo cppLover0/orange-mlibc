@@ -320,6 +320,14 @@ int sys_getcwd(char *buffer, size_t size) {
     return ret;
 }
 
+int sys_sockname(int fd, struct sockaddr *addr_ptr, socklen_t max_addr_length, socklen_t *actual_length) {
+    socklen_t len;
+    int ret;
+    asm volatile("syscall" : "=a"(ret), "=d"(len) : "a"(69), "D"(fd), "S"(addr_ptr), "d"(max_addr_length) : "rcx","r11");
+    *actual_length = len;
+    return ret;
+}
+
 int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru, pid_t *ret_pid) {
     int ret;
     uint64_t final;
