@@ -296,10 +296,6 @@ int sys_setpgid(pid_t pid, pid_t pgid) {
    return 0;
 }
 
-int sys_setuid(uid_t uid) {
-   return 0;
-}
-
 int sys_seteuid(uid_t euid) {
    return 0;
 }
