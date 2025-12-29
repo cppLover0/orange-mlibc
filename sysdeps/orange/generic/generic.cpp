@@ -455,18 +455,7 @@ ssize_t sys_recvfrom(int fd, void *buffer, size_t size, int flags, struct sockad
 int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
     ssize_t total_written = 0;
     int ret = 0;
-    for (int i = 0; i < hdr->msg_iovlen; i++) {
-        ssize_t sent_bytes = 0;
-        int res = sys_write(fd, hdr->msg_iov[i].iov_base, hdr->msg_iov[i].iov_len, &sent_bytes);
-        if (res != 0) {
-            ret = res; 
-            break;
-        }
-        total_written += sent_bytes;
-        if (sent_bytes < hdr->msg_iov[i].iov_len) {
-            break; 
-        }
-    }
+    asm volatile("syscall" : "=a"(ret), "=d"(total_written) : "a"(71), "D"(fd), "S"(hdr), "d"(flags) : "rcx","r11");
     *length = total_written;
     return ret;
 }
