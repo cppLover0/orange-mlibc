@@ -674,4 +674,12 @@ int sys_getsockopt(int fd, int layer, int number,void *__restrict buffer, sockle
     return ret;
 }
 
+int sys_eventfd_create(unsigned int initval, int flags, int *fd) {
+    int ret;
+    int fd0;
+    asm volatile("syscall" : "=a"(ret), "=d"(fd0) : "a"(72), "D"(initval), "S"(flags) : "rcx","r11");
+    *fd = fd0;
+    return ret;
+}
+
 }
