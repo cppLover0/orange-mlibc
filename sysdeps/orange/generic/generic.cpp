@@ -22,7 +22,7 @@ int sys_futex_wake(int *pointer) {
 
 int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
     int ret;
-    asm volatile("syscall" : "=a"(ret) : "a"(2), "D"(pointer), "S"(expected) : "rcx","r11");
+    asm volatile("syscall" : "=a"(ret) : "a"(2), "D"(pointer), "S"(expected), "d"(time) : "rcx","r11");
     return ret;
 }
 
