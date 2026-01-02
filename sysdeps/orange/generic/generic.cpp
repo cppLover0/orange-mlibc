@@ -269,7 +269,7 @@ uid_t sys_geteuid() {
 }
 
 pid_t sys_gettid() {
-   return 0;
+   return sys_getpid();
 }
 
 pid_t sys_getppid() {
