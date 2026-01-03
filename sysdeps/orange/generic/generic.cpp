@@ -669,4 +669,10 @@ int sys_eventfd_create(unsigned int initval, int flags, int *fd) {
     return ret;
 }
 
+int sys_kill(int pid, int sig) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(74), "D"(pid), "S"(sig) : "rcx","r11");
+    return ret;
+}
+
 }
