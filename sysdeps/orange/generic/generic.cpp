@@ -675,4 +675,10 @@ int sys_kill(int pid, int sig) {
     return ret;
 }
 
+int sys_shutdown(int sockfd, int how) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(75), "D"(sockfd) : "rcx","r11");
+    return ret;
+}
+
 }
