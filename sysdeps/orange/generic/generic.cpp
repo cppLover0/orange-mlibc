@@ -681,4 +681,12 @@ int sys_shutdown(int sockfd, int how) {
     return ret;
 }
 
+int sys_shmget(int *shm_id, key_t key, size_t size, int shmflg) {
+    int ret;
+    int new_id;
+    asm volatile("syscall" : "=a"(ret), "=d"(new_id) : "a"(76), "D"(key), "S"(size), "d"(shmflg) : "rcx","r11");
+    *shm_id = new_id;
+    return ret;
+}
+
 }
