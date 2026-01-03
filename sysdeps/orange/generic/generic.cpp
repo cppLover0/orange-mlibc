@@ -689,4 +689,12 @@ int sys_shmget(int *shm_id, key_t key, size_t size, int shmflg) {
     return ret;
 }
 
+int sys_shmat(void **seg_start, int shmid, const void *shmaddr, int shmflg) {
+    void* seg;
+    int ret;
+    asm volatile("syscall" : "=a"(ret), "=d"(seg) : "a"(77), "D"(shmid), "S"(shmaddr), "d"(shmflg) : "rcx","r11");
+    *seg_start = seg;
+    return ret;
+}
+
 }
