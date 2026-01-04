@@ -697,4 +697,16 @@ int sys_shmat(void **seg_start, int shmid, const void *shmaddr, int shmflg) {
     return ret;
 }
 
+int sys_shmdt(const void *shmaddr) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(78), "D"(shmaddr) : "rcx","r11");
+    return ret;
+}
+
+int sys_shmctl(int *idx, int shmid, int cmd, struct shmid_ds *buf) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(79), "D"(shmid), "S"(cmd), "d"(buf) : "rcx","r11");
+    return ret;
+}
+
 }
