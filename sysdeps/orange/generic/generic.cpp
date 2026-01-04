@@ -709,4 +709,8 @@ int sys_shmctl(int *idx, int shmid, int cmd, struct shmid_ds *buf) {
     return ret;
 }
 
+int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value) {
+    return ENOSYS;
+}
+
 }
