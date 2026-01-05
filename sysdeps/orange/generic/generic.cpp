@@ -620,8 +620,14 @@ int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restric
     return ENOSYS;
 }
 
+void __mlibc_signalhandler(void (*jmp)(int sig),int signal) {
+    mlibc::infoLogger() << "Got sig " << signal << frg::endlog;
+    asm volatile("syscall" : : "a"(81) : "rcx","r11");
+}
+
 int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
-    return ENOSYS;
+    asm volatile("syscall" : : "a"(82), "D"(__mlibc_signalhandler) : "rcx","r11");
+    return 0;
 }
 
 int sys_setpriority(int which, id_t who, int prio) {
