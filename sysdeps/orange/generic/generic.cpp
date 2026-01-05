@@ -137,6 +137,12 @@ int sys_clock_get(int clock, time_t *secs, long *nanos) {
     return ret;
 }
 
+int sys_clock_getres(int clock, time_t *secs, long *nanos) {
+    *secs = 0;
+    *nanos = 1;
+    return 0;
+}
+
 int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
     int ready_fd = fd;
 
