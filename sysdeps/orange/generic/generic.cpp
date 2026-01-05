@@ -611,11 +611,11 @@ int sys_ttyname(int fd, char *buf, size_t size) {
 }
 
 int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
-    return ENOSYS;
+    return 0;
 }
 
 int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
-    return ENOSYS;
+    return 0;
 }
 
 int sys_setpriority(int which, id_t who, int prio) {
