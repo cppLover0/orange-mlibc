@@ -745,4 +745,10 @@ int sys_getentropy(void *buffer, size_t length) {
     return ret;
 }
 
+int sys_pause() {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(83) : "rcx","r11");
+    return ret;
+}
+
 }
