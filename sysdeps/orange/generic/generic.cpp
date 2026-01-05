@@ -726,4 +726,11 @@ int sys_getresuid(uid_t *ruid, uid_t *euid, uid_t *suid) {
     return 0;
 }
 
+int sys_getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid) {
+    *rgid = sys_getgid();
+    *egid = sys_getgid();
+    *sgid = sys_getgid();
+    return 0;
+}
+
 }
