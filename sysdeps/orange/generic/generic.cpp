@@ -733,4 +733,10 @@ int sys_getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid) {
     return 0;
 }
 
+int sys_getentropy(void *buffer, size_t length) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(80), "D"(buffer), "S"(length) : "rcx","r11");
+    return ret;
+}
+
 }
