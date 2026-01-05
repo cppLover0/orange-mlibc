@@ -611,11 +611,11 @@ int sys_ttyname(int fd, char *buf, size_t size) {
 }
 
 int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
-    return 0;
+    return ENOSYS;
 }
 
 int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
-    return 0;
+    return ENOSYS;
 }
 
 int sys_setpriority(int which, id_t who, int prio) {
@@ -710,7 +710,13 @@ int sys_shmctl(int *idx, int shmid, int cmd, struct shmid_ds *buf) {
 }
 
 int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value) {
-    return 0;
+    return ENOSYS;
+}
+
+int sys_getresuid(uid_t *ruid, uid_t *euid, uid_t *suid) {
+    *ruid = sys_getuid();
+    *euid = sys_getuid();
+    *suid = sys_getuid();
 }
 
 }
