@@ -630,6 +630,10 @@ int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__r
     return 0;
 }
 
+int sys_fdatasync(int fd) {
+    return 0; // stub
+}
+
 int sys_setpriority(int which, id_t who, int prio) {
     int ret;
     asm volatile("syscall" : "=a"(ret) : "a"(59), "D"(which), "S"(who), "d"(prio) : "rcx", "r11");
