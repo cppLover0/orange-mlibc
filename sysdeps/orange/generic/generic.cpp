@@ -767,4 +767,8 @@ int sys_getrlimit(int resource, struct rlimit *limit) {
     return ENOSYS;
 }
 
+int sys_setrlimit(int resource, const struct rlimit *limit) {
+    return 0;
+}
+
 }
