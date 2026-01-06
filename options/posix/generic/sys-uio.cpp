@@ -41,7 +41,7 @@ ssize_t writev(int fd, const struct iovec *iovs, int iovc) {
 	}
 
 	// TODO: this implementation is not safe to use in signal contexts
-	mlibc::infoLogger() << "mlibc: falling back to signal-unsafe writev implementation!" << frg::endlog;
+	//mlibc::infoLogger() << "mlibc: falling back to signal-unsafe writev implementation!" << frg::endlog;
 	size_t bytes = 0;
 	for(int i = 0; i < iovc; i++) {
 		if(SSIZE_MAX - bytes < iovs[i].iov_len) {
