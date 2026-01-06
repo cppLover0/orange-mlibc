@@ -760,6 +760,7 @@ int sys_getrlimit(int resource, struct rlimit *limit) {
         case 7:
             limit->rlim_cur = sizeof(int);
             limit->rlim_max = sizeof(int);
+            return 0;
         default:
             return ENOSYS;
     }
