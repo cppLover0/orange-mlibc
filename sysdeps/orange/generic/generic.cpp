@@ -623,16 +623,18 @@ int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restric
 void __mlibc_signalhandler(void (*jmp)(int sig),int signal) {
     uint64_t _jmp = (uint64_t)jmp;
     switch(_jmp) {
-    case SIG_DFL: {
+    case (uint64_t)SIG_DFL: {
         switch(signal) {
         case SIGCHLD:
         case SIGCONT:
         case SIGURG:
         case SIGWINCH:
             break;
+        default:
+            exit(128 + sig);
         };
     };
-    case SIG_IGN:
+    case (uint64_t)SIG_IGN:
         break;
     default:
         jmp(signal);
