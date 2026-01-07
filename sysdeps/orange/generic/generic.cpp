@@ -645,13 +645,13 @@ void __mlibc_signalhandler(void (*jmp)(int sig),int signal) {
     asm volatile("syscall" : : "a"(81) : "rcx","r11");
 }
 
-#endif
-
 int sys_sigaction(int signum, const struct sigaction* hnd, struct sigaction* old) {
     asm volatile("syscall" : : "a"(82), "D"(__mlibc_signalhandler) : "rcx","r11");
     asm volatile("syscall" : : "a"(84), "D"(signum), "S"(hnd), "d"(old) : "rcx","r11"); 
     return 0;
 }
+
+#endif
 
 int sys_fdatasync(int fd) {
     return 0; // stub
