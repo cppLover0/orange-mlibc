@@ -632,6 +632,12 @@ void __mlibc_signalhandler(void (*jmp)(int sig),int signal) {
         case SIGURG:
         case SIGWINCH:
             break;
+        case SIGTSTP:
+        case SIGTTIN:
+        case SIGTTOU:
+        case SIGSTOP:
+            mlibc::infoLogger() << "Process signal stopping is not implemented" << frg::endlog;
+            break;
         default:
             exit(128 + signal);
         };
