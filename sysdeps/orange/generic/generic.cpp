@@ -621,12 +621,29 @@ int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restric
 }
 
 void __mlibc_signalhandler(void (*jmp)(int sig),int signal) {
-    mlibc::infoLogger() << "Got sig " << signal << frg::endlog;
+    uint64_t _jmp = (uint64_t)jmp;
+    switch(_jmp) {
+    case SIG_DFL: {
+        switch(signal) {
+        case SIGCHLD:
+        case SIGCONT:
+        case SIGURG:
+        case SIGWINCH:
+            break;
+        };
+    };
+    case SIG_IGN:
+        break;
+    default:
+        jmp(signal);
+        break;
+    };
     asm volatile("syscall" : : "a"(81) : "rcx","r11");
 }
 
-int sys_sigaction(int, const struct sigaction *__restrict, struct sigaction *__restrict) {
+int sys_sigaction(int signum, const struct sigaction* hnd, struct sigaction* old) {
     asm volatile("syscall" : : "a"(82), "D"(__mlibc_signalhandler) : "rcx","r11");
+    asm volatile("syscall" : : "a"(84), "D"(signum), "S"(hnd), "d"(old) : "rcx","r11"); 
     return 0;
 }
 
