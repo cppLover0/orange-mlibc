@@ -652,7 +652,12 @@ void __mlibc_signalhandler(void (*jmp)(int sig),int signal) {
 }
 
 int sys_sigaction(int signum, const struct sigaction* hnd, struct sigaction* old) {
+
     asm volatile("syscall" : : "a"(82), "D"(__mlibc_signalhandler) : "rcx","r11");
+
+    if(old)
+        return ENOSYS;
+
     asm volatile("syscall" : : "a"(84), "D"(signum), "S"(hnd->sa_handler) : "rcx","r11"); 
     return 0;
 }
