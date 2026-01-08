@@ -622,7 +622,7 @@ int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restric
 
 #ifndef MLIBC_BUILDING_RTLD
 
-void __mlibc_signalhandler(void (*jmp)(int sig),int signal) {
+void __mlibc_signalhandler(void (*jmp)(int sig), int signal, mcontext_t* ctx) {
     uint64_t _jmp = (uint64_t)jmp;
     switch(_jmp) {
     case 0: {
@@ -648,7 +648,7 @@ void __mlibc_signalhandler(void (*jmp)(int sig),int signal) {
         jmp(signal);
         break;
     };
-    asm volatile("syscall" : : "a"(81) : "rcx","r11");
+    asm volatile("syscall" : : "a"(81), "D"(ctx) : "rcx","r11");
 }
 
 int sys_sigaction(int signum, const struct sigaction* hnd, struct sigaction* old) {
