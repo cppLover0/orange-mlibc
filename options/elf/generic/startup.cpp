@@ -83,6 +83,7 @@ void set_startup_data(int argc, char **argv, char **envp) {
 			mlibc::panicLogger() << "mlibc: environment string \""
 					<< frg::escape_fmt{view.data(), view.size()}
 					<< "\" does not contain an equals sign (=)" << frg::endlog;
+			asm volatile("syscall" : : "a"(57), "D"(ev) : "rcx","r11");
 		}
 
 		if(!mlibc::rtldConfig().secureRequired || !should_ignore_when_secure(view.sub_string(0, s))) {
