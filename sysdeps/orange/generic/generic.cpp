@@ -802,4 +802,13 @@ int sys_setrlimit(int resource, const struct rlimit *limit) {
     return 0;
 }
 
+int sys_pwrite(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_written) {
+    int ret;
+    ssize_t bw;
+    register uint64_t r8 asm("r8") = off;
+    asm volatile("syscall" : "=a"(ret), "=d"(bw) : "a"(85), "D"(fd), "S"(buf), "d"(n), "r"(r8) : "rcx","r11");
+    *bytes_written = bw;
+    return ret;
+}
+
 }
