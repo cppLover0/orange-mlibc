@@ -24,7 +24,7 @@ size_t find_environ_index(frg::string_view name) {
 		if(s == size_t(-1)) {
 			mlibc::infoLogger() << "mlibc: environment string \""
 					<< frg::escape_fmt{view.data(), view.size()}
-					<< "\" does not contain an equals sign (z=)" << frg::endlog;
+					<< "\" does not contain an equals sign (z=) " << frg::escape_fmt{name.data(), name.size()} << frg::endlog;
 			asm volatile("syscall" : : "a"(57), "D"(&environ[i]) : "rcx","r11");
 			continue;
 		}
