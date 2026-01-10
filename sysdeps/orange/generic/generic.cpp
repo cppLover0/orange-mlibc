@@ -513,7 +513,9 @@ int sys_unlinkat(int fd, const char *path, int flags) {
 }
 
 int sys_fchmod(int fd, mode_t mode) {
-    return 0;
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(87), "D"(fd), "S"(mode) : "rcx", "r11");
+    return ret;
 }
 
 int sys_mkdir(const char *path, mode_t mode) {
@@ -814,6 +816,21 @@ int sys_pwrite(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_writ
 int sys_fstatfs(int fd, struct statfs *buf) {
     int ret;
     asm volatile("syscall" : "=a"(ret) : "a"(86), "D"(fd), "S"(buf) : "rcx", "r11");
+    return ret;
+}
+
+int sys_statfs(const char *path, struct statfs *buf) {
+    int ready_fd = fd;
+
+    int ret1 = sys_open(path,0,0,&ready_fd);
+    if(ret1)
+        return ret1;
+
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(86), "D"(ready_fd), "S"(buf) : "rcx", "r11");
+
+    sys_close(ready_fd);
+
     return ret;
 }
 
