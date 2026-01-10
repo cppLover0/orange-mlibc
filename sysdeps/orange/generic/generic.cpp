@@ -820,7 +820,7 @@ int sys_fstatfs(int fd, struct statfs *buf) {
 }
 
 int sys_statfs(const char *path, struct statfs *buf) {
-    int ready_fd = fd;
+    int ready_fd = -1;
 
     int ret1 = sys_open(path,0,0,&ready_fd);
     if(ret1)
