@@ -15,6 +15,16 @@ namespace {
 
 char **environ = empty_environment;
 
+volatile int env_spinlock = 0;
+
+void env_lock() {
+    while (__sync_lock_test_and_set(&env_spinlock, 1)) {}
+}
+
+void env_unlock() {
+    __sync_lock_release(&env_spinlock);
+}
+
 namespace {
 
 size_t find_environ_index(frg::string_view name) {
@@ -97,13 +107,15 @@ void unassign_variable(frg::string_view name) {
 } // anonymous namespace
 
 char *getenv(const char *name) {
+	env_lock();
 	auto k = find_environ_index(name);
-	if(k == size_t(-1))
-		return nullptr;
+	if(k == size_t(-1)) { env_unlock();
+		return nullptr; }
 
 	frg::string_view view{environ[k]};
 	size_t s = view.find_first('=');
 	__ensure(s != size_t(-1));
+	env_unlock();
 	return const_cast<char *>(view.data() + s + 1);
 }
 
@@ -128,15 +140,6 @@ int putenv(char *string) {
 
 #if __MLIBC_POSIX_OPTION
 
-volatile int env_spinlock = 0;
-
-void env_lock() {
-    while (__sync_lock_test_and_set(&env_spinlock, 1)) {}
-}
-
-void env_unlock() {
-    __sync_lock_release(&env_spinlock);
-}
 int putenv(char *string) {
 	env_lock();
 	int s = mlibc::putenv(string);
