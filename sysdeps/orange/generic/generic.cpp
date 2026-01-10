@@ -834,4 +834,9 @@ int sys_statfs(const char *path, struct statfs *buf) {
     return ret;
 }
 
+int sys_setsockopt(int fd, int layer, int number,
+		const void *buffer, socklen_t size) {
+            return 0;
+        }
+
 }
