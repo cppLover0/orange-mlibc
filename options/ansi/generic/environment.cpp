@@ -128,11 +128,29 @@ int putenv(char *string) {
 
 #if __MLIBC_POSIX_OPTION
 
+#include <stdatomic.h>
+
+volatile std::atomic_flag env_lock = ATOMIC_FLAG_INIT;
+
+inline void env_lock() {
+	while(flag.test_and_set(std::memory_order_acquire)) {
+        asm volatile("nop");  
+    }
+}
+
+inline void env_unlock() {
+	flag.clear(std::memory_order_release);
+}
+
 int putenv(char *string) {
-	return mlibc::putenv(string);
+	env_lock();
+	int s = mlibc::putenv(string);
+	env_unlock();
+	return s;
 }
 
 int setenv(const char *name, const char *value, int overwrite) {
+	env_lock();
 	frg::string_view view{name};
 	size_t s = view.find_first('=');
 	if(s != size_t(-1)) {
@@ -140,6 +158,7 @@ int setenv(const char *name, const char *value, int overwrite) {
 				<< frg::escape_fmt{view.data(), view.size()} << "\" contains an equals sign"
 				<< frg::endlog;
 		errno = EINVAL;
+		env_unlock();
 		return -1;
 	}
 
@@ -150,19 +169,24 @@ int setenv(const char *name, const char *value, int overwrite) {
 
 	update_vector();
 	assign_variable(name, string, overwrite);
+	env_unlock();
 	return 0;
 }
 
 int unsetenv(const char *name) {
+	env_lock();
 	update_vector();
 	unassign_variable(name);
+	env_unlock();
 	return 0;
 }
 
 int clearenv(void) {
+	env_lock();
 	auto vector = get_vector();
 	vector.clear();
 	update_vector();
+	env_unlock();
 	return 0;
 }
 
