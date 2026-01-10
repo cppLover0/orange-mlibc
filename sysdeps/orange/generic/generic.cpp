@@ -811,4 +811,10 @@ int sys_pwrite(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_writ
     return ret;
 }
 
+int sys_fstatfs(int fd, struct statfs *buf) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(86), "D"(fd), "S"(buf) : "rcx", "r11");
+    return ret;
+}
+
 }
