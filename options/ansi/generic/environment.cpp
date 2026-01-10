@@ -128,8 +128,6 @@ int putenv(char *string) {
 
 #if __MLIBC_POSIX_OPTION
 
-#include <stdatomic.h>
-
 volatile int env_spinlock = 0;
 
 void env_lock() {
