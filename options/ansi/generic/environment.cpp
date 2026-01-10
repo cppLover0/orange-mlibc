@@ -130,18 +130,15 @@ int putenv(char *string) {
 
 #include <stdatomic.h>
 
-volatile std::atomic_flag env_lock = ATOMIC_FLAG_INIT;
+volatile int env_spinlock = 0;
 
-inline void env_lock() {
-	while(flag.test_and_set(std::memory_order_acquire)) {
-        asm volatile("nop");  
-    }
+void env_lock() {
+    while (__sync_lock_test_and_set(&env_spinlock, 1)) {}
 }
 
-inline void env_unlock() {
-	flag.clear(std::memory_order_release);
+void env_unlock() {
+    __sync_lock_release(&env_spinlock);
 }
-
 int putenv(char *string) {
 	env_lock();
 	int s = mlibc::putenv(string);
