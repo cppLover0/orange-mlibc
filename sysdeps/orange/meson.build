@@ -72,6 +72,31 @@ if not no_headers
 		subdir: 'abi-bits',
 		follow_symlinks: true
 	)
+
+	install_headers(
+		'include/sys/mac.h',
+		'include/sys/syscall.h',
+		'include/sys/reboot.h',
+		'include/sys/mount.h',
+		'include/sys/sysmacros.h',
+		'include/sys/ptrace.h',
+		subdir: 'sys'
+	)
+
+	install_headers(
+		'include/asm/ioctls.h',
+		subdir: 'asm'
+	)
+
+	install_headers(
+		'include/linux/fb.h',
+		subdir: 'linux'
+	)
+
+	install_headers(
+		'include/mntent.h',
+	)
+
 endif
 if not headers_only
 	crt = custom_target('crt0',
