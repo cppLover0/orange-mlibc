@@ -1,5 +1,6 @@
 sysdep_supported_options = {
 	'posix': true,
+	'linux': true,
 	'glibc': true,
 	'bsd': true
 }
@@ -24,10 +25,11 @@ if not no_headers
 		'include/abi-bits/errno.h',
 		'include/abi-bits/fcntl.h',
 		'include/abi-bits/in.h',
+		'include/abi-bits/stat.h',
+		'include/abi-bits/statx.h',
+		'include/abi-bits/signal.h',
 		'include/abi-bits/reboot.h',
 		'include/abi-bits/resource.h',
-		'include/abi-bits/stat.h',
-		'include/abi-bits/signal.h',
 		'include/abi-bits/socket.h',
 		'include/abi-bits/termios.h',
 		'include/abi-bits/time.h',
@@ -45,7 +47,9 @@ if not no_headers
 		'include/abi-bits/utsname.h',
 		'include/abi-bits/ptrace.h',
 		'include/abi-bits/poll.h',
+		'include/abi-bits/epoll.h',
 		'include/abi-bits/packet.h',
+		'include/abi-bits/inotify.h',
 		'include/abi-bits/clockid_t.h',
 		'include/abi-bits/ipc.h',
 		'include/abi-bits/shm.h',
@@ -54,9 +58,13 @@ if not no_headers
 		'include/abi-bits/fsfilcnt_t.h',
 		'include/abi-bits/fsblkcnt_t.h',
 		'include/abi-bits/socklen_t.h',
+		'include/abi-bits/statfs.h',
 		'include/abi-bits/statvfs.h',
 		'include/abi-bits/ioctls.h',
+		'include/abi-bits/xattr.h',
 		'include/abi-bits/msg.h',
+		'include/abi-bits/vt.h',
+		'include/abi-bits/random.h',
 		'include/abi-bits/rlim_t.h',
 		'include/abi-bits/sigval.h',
 		'include/abi-bits/sigevent.h',
@@ -70,33 +78,8 @@ if not no_headers
 		'include/abi-bits/sig-limits.h',
 		'include/abi-bits/sigset_t.h',
 		subdir: 'abi-bits',
-		follow_symlinks: true
+		follow_symlinks: true,
 	)
-
-	install_headers(
-		'include/sys/mac.h',
-		'include/sys/syscall.h',
-		'include/sys/reboot.h',
-		'include/sys/mount.h',
-		'include/sys/sysmacros.h',
-		'include/sys/ptrace.h',
-		subdir: 'sys'
-	)
-
-	install_headers(
-		'include/asm/ioctls.h',
-		subdir: 'asm'
-	)
-
-	install_headers(
-		'include/linux/fb.h',
-		subdir: 'linux'
-	)
-
-	install_headers(
-		'include/mntent.h',
-	)
-
 endif
 if not headers_only
 	crt = custom_target('crt0',
