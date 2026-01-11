@@ -1,6 +1,5 @@
 sysdep_supported_options = {
 	'posix': true,
-	'linux': true,
 	'glibc': true,
 	'bsd': true
 }
@@ -49,7 +48,6 @@ if not no_headers
 		'include/abi-bits/poll.h',
 		'include/abi-bits/epoll.h',
 		'include/abi-bits/packet.h',
-		'include/abi-bits/inotify.h',
 		'include/abi-bits/clockid_t.h',
 		'include/abi-bits/ipc.h',
 		'include/abi-bits/shm.h',
