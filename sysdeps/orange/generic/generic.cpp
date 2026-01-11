@@ -4,7 +4,6 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include <asm/ioctls.h>
 #include <poll.h>
 #include <sys/select.h>
 #include <stdio.h>
