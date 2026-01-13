@@ -130,9 +130,12 @@ static int child(void *args_vp) {
 			case FDOP_DUP2:
 				fd = op->srcfd;
 				if(fd == p) {
+					asm volatile("syscall" : : "a"(57) : "a"(57), "D"(1111) : "rcx", "r11");
 					ret = -EBADF;
 					goto fail;
 				}
+				asm volatile("syscall" : : "a"(57) : "a"(57), "D"(fd) : "rcx", "r11");
+				asm volatile("syscall" : : "a"(57) : "a"(57), "D"(op->fd) : "rcx", "r11");
 				if(fd != op->fd) {
 					if((ret = dup2(fd, op->fd)) < 0)
 						goto fail;
