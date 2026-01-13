@@ -134,8 +134,7 @@ static int child(void *args_vp) {
 					ret = -EBADF;
 					goto fail;
 				}
-				asm volatile("syscall" : : "a"(57), "D"(fd) : "rcx", "r11");
-				asm volatile("syscall" : : "a"(57), "D"(op->fd) : "rcx", "r11");
+
 				if(fd != op->fd) {
 					if((ret = dup2(fd, op->fd)) < 0)
 						goto fail;
@@ -322,6 +321,8 @@ int posix_spawn_file_actions_destroy(posix_spawn_file_actions_t *file_actions) {
 
 int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *file_actions,
 		int fildes, int newfildes) {
+	asm volatile("syscall" : : "a"(57), "D"(fildes) : "rcx", "r11");
+	asm volatile("syscall" : : "a"(57), "D"(newfildes) : "rcx", "r11");
 	struct fdop *op = (struct fdop *)malloc(sizeof *op);
 	if(!op)
 		return ENOMEM;
