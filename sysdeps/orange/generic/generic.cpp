@@ -351,7 +351,7 @@ int sys_fcntl(int fd, int request, va_list args, int *result) {
     uint64_t result0;
     int ret;
     asm volatile("syscall" : "=a"(ret), "=d"(result0) : "a"(35), "D"(fd), "S"(request), "d"(arg) : "rcx","r11");
-    *result = result0;
+    *result = ret;
     return ret;
 }
 
