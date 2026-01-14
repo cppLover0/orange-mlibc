@@ -519,6 +519,10 @@ void *malloc(size_t size) {
 
 void *realloc(void *ptr, size_t size) {
 	void* new_p = malloc(size);
+	if(!size) {
+		free(ptr);
+		return 0;
+	}
 	if(ptr) {
 		memcpy(new_p,ptr,size);
 		free(ptr);
