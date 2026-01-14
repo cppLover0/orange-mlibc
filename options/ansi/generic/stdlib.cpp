@@ -518,16 +518,12 @@ void *malloc(size_t size) {
 }
 
 void *realloc(void *ptr, size_t size) {
-	void* new_p = malloc(size);
-	if(!size) {
-		free(ptr);
-		return 0;
-	}
-	if(ptr) {
-		memcpy(new_p,ptr,size);
-		free(ptr);
-	}
-	return new_p;
+	auto nptr = getAllocator().reallocate(ptr, size);
+	// TODO: Print PID only if POSIX option is enabled.
+	if (mlibc::globalConfig().debugMalloc)
+		mlibc::infoLogger() << "mlibc (PID ?): realloc() on "
+				<< ptr << " returns " << nptr << frg::endlog;
+	return nptr;
 }
 
 int posix_memalign(void **out, size_t align, size_t size) {
