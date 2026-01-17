@@ -43,7 +43,19 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
 }
 
 int sys_access(const char *path, int mode) {
+   int fd;
+   int ret = sys_open(path,0,0,&fd);
+   if(ret != 0) {
+        return ret;
+   }
+   sys_close(fd);
    return 0;
+}
+
+int sys_fchmodat(int fd, const char *pathname, mode_t mode, int flags) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(88), "D"(fd), "S"(pathname), "d"(mode) : "rcx", "r11");
+    return ret;
 }
 
 int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
