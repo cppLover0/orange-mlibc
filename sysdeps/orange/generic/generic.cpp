@@ -849,3 +849,5 @@ int sys_umask(mode_t mode, mode_t *old) {
     *old = 0;
     return 0;
 }
+
+}
