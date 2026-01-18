@@ -157,17 +157,12 @@ int sys_clock_getres(int clock, time_t *secs, long *nanos) {
 int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
     int ready_fd = fd;
 
+    // orange have some stuff like fd caching so no sys_open here
+
     if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path) {
-      int ret1 = sys_open(path,0,0,&ready_fd);
-      if(ret1)
-         return ret1;
-    }
-
-    int ret;
-    asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(ready_fd), "S"(statbuf), "d"(flags) : "rcx", "r11");
-
-    if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path)
-       sys_close(ready_fd);
+        asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(path), "S"(statbuf), "d"(flags) : "rcx", "r11");
+    } else if (fsfdt == fsfd_target::fd)
+        asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(fd), "S"(statbuf), "d"(flags) : "rcx", "r11");
 
     return ret;
 }
