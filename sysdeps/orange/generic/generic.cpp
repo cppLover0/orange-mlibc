@@ -162,7 +162,7 @@ int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat
     // orange have some stuff like fd caching so no sys_open here
 
     if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path) {
-        asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(path), "S"(statbuf), "d"(flags) : "rcx", "r11");
+        asm volatile("syscall" : "=a"(ret) : "a"(91), "D"(path), "S"(statbuf), "d"(flags) : "rcx", "r11");
     } else if (fsfdt == fsfd_target::fd)
         asm volatile("syscall" : "=a"(ret) : "a"(13), "D"(fd), "S"(statbuf), "d"(flags) : "rcx", "r11");
 
