@@ -411,7 +411,6 @@ int sys_sysconf(int num, long *rret) {
 			return 0;
 		case _SC_AVPHYS_PAGES:
 		case _SC_PHYS_PAGES:
-		case _SC_TOTAL_PAGES:
             *rret = 1024;
             return 0;
 		case _SC_THREAD_STACK_MIN:
