@@ -390,8 +390,6 @@ int sys_setthreadaffinity(pid_t tid, size_t cpusetsize, const cpu_set_t *mask) {
 }
 
 int sys_sysconf(int num, long *rret) {
-	struct meminfo mem;
-	struct cpuinfo cpu;
 	int ret, errno;
 	long secs, nanos;
 
