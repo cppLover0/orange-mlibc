@@ -389,7 +389,51 @@ int sys_setthreadaffinity(pid_t tid, size_t cpusetsize, const cpu_set_t *mask) {
     return 0;
 }
 
+int sys_sysconf(int num, long *rret) {
+	struct meminfo mem;
+	struct cpuinfo cpu;
+	int ret, errno;
+	long secs, nanos;
+
+	switch (num) {
+		case _SC_LINE_MAX:
+			return 2048;
+		case _SC_NGROUPS_MAX:
+			return 0x10000;
+		case _SC_CHILD_MAX:
+			return 30;
+		case _SC_NPROCESSORS_CONF:
+		case _SC_NPROCESSORS_ONLN:
+			int cpuc;
+            asm volatile("syscall" : "=a"(cpuc) : "a"(90) : "rcx", "r11");
+            *rret = (long)cpuc;
+            return 0;
+		case _SC_OPEN_MAX:
+			*rret = 1024;
+			return 0;
+		case _SC_AVPHYS_PAGES:
+		case _SC_PHYS_PAGES:
+		case _SC_TOTAL_PAGES:
+            *rret = 1024;
+            return 0;
+		case _SC_THREAD_STACK_MIN:
+			*rret = 0x1000;
+			return 0;
+		case _SC_CLK_TCK:
+			ret = sys_clock_getres(CLOCK_MONOTONIC, &secs, &nanos);
+			if (ret == 0) {
+				*rret = 1000000000 / nanos;
+				return 0;
+			} else {
+				return ret;
+			}
+		default:
+			return EINVAL;
+	}
+}
+
 int sys_uname(struct utsname *buf) {
+    memset(buf,0,sizeof(struct utsname));
     memcpy(buf->sysname, "Orange",6);
 	memcpy(buf->nodename, "orange-pc",6);
 	memcpy(buf->release, "\0",1);
