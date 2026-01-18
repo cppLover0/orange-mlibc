@@ -371,6 +371,12 @@ int sys_fsync(int fd) {
     return 0;
 }
 
+int sys_getaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *mask) {
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(89), "D"(pid), "S"(cpusetsize), "d"(mask) : "rcx", "r11");
+    return ret;
+}
+
 int sys_uname(struct utsname *buf) {
     memcpy(buf->sysname, "Orange",6);
 	memcpy(buf->nodename, "orange-pc",6);
