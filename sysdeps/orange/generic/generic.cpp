@@ -381,6 +381,14 @@ int sys_getthreadaffinity(pid_t tid, size_t cpusetsize, cpu_set_t *mask) {
     return sys_getaffinity(tid,cpusetsize,mask);
 }
 
+int sys_setaffinity(pid_t pid, size_t cpusetsize, const cpu_set_t *mask) {
+    return 0;
+}
+
+int sys_setthreadaffinity(pid_t tid, size_t cpusetsize, const cpu_set_t *mask) {
+    return 0;
+}
+
 int sys_uname(struct utsname *buf) {
     memcpy(buf->sysname, "Orange",6);
 	memcpy(buf->nodename, "orange-pc",6);
