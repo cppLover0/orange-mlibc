@@ -157,6 +157,8 @@ int sys_clock_getres(int clock, time_t *secs, long *nanos) {
 int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
     int ready_fd = fd;
 
+    int ret;
+
     // orange have some stuff like fd caching so no sys_open here
 
     if(fsfdt == fsfd_target::path || fsfdt == fsfd_target::fd_path) {
