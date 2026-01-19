@@ -169,6 +169,47 @@ int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat
     return ret;
 }
 
+int sys_sysconf(int num, long *rret) {
+	int ret, errno;
+	long secs, nanos;
+
+	switch (num) {
+		case _SC_LINE_MAX:
+			return 2048;
+		case _SC_NGROUPS_MAX:
+			return 0x10000;
+		case _SC_CHILD_MAX:
+			return 30;
+		case _SC_NPROCESSORS_CONF:
+		case _SC_NPROCESSORS_ONLN:
+			int cpuc;
+            asm volatile("syscall" : "=a"(cpuc) : "a"(90) : "rcx", "r11");
+            *rret = (long)cpuc;
+            return 0;
+		case _SC_OPEN_MAX:
+			*rret = 1024;
+			return 0;
+		case _SC_AVPHYS_PAGES:
+		case _SC_PHYS_PAGES:
+            *rret = 1024;
+            return 0;
+		case _SC_THREAD_STACK_MIN:
+			*rret = 0x1000;
+			return 0;
+		case _SC_CLK_TCK:
+			ret = sys_clock_getres(CLOCK_MONOTONIC, &secs, &nanos);
+			if (ret == 0) {
+				*rret = 1000000000 / nanos;
+				return 0;
+			} else {
+				return ret;
+			}
+		default:
+			return EINVAL;
+	}
+}
+
+
 int sys_vm_protect(void *pointer, size_t size, int prot) {
     return 0;
 }
