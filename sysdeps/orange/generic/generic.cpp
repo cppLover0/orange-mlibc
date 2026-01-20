@@ -760,6 +760,13 @@ int sys_rename(const char *path, const char *new_path) {
     return ret;
 }
 
+int sys_renameat(int olddirfd, const char *old_path, int newdirfd, const char *new_path) {
+    register uint64_t r8 asm("r8") = (uint64_t)new_path;
+    int ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(92), "D"(olddirfd), "S"(old_path), "d"(newdirfd), "r"(new_path) : "rcx", "r11");
+    return ret;
+}
+
 int sys_socketpair(int domain, int type_and_flags, int proto, int *fds) {
     int fd0;
     int fd1;
