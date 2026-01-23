@@ -863,6 +863,18 @@ int sys_pause() {
     return ret;
 }
 
+int sys_getrlimit(int resource, struct rlimit *limit) {
+    switch(resource) {
+        case 7:
+            limit->rlim_cur = sizeof(int);
+            limit->rlim_max = sizeof(int);
+            return 0;
+        default:
+            return ENOSYS;
+    }
+    return ENOSYS;
+}
+
 int sys_setrlimit(int resource, const struct rlimit *limit) {
     return 0;
 }
