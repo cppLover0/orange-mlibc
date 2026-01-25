@@ -916,7 +916,7 @@ int sys_umask(mode_t mode, mode_t *old) {
 
 int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statxbuf) {
     register uint64_t r8 asm("r8") = mask;
-    register uint64_t r9 asm("r9") = statxbuf;
+    register uint64_t r9 asm("r9") = (uint64_t)statxbuf;
     int ret;
     asm volatile("syscall" : "=a"(ret) : "a"(93), "D"(dirfd), "S"(pathname), "d"(flags), "r"(r8), "r"(r9) : "rcx", "r11");
     return ret;
